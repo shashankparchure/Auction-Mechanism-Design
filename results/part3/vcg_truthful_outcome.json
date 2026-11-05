@@ -1,0 +1,28 @@
+{
+  "true_costs": {
+    "AB": 3.0,
+    "AC": 2.0,
+    "BD": 2.0,
+    "BE": 1.0,
+    "CE": 3.0,
+    "CF": 5.0,
+    "DF": 2.0,
+    "EF": 1.0
+  },
+  "selected_path": "ABEF",
+  "path_cost": 5.0,
+  "payments_to_edges": {
+    "AB": 4.0,
+    "AC": 0.0,
+    "BD": 0.0,
+    "BE": 2.0,
+    "CE": 0.0,
+    "CF": 0.0,
+    "DF": 0.0,
+    "EF": 3.0
+  },
+  "on_path_edge": "BE",
+  "off_path_edge": "AC",
+  "on_path_truthful_utility": 1.0,
+  "off_path_truthful_utility": 0.0
+}

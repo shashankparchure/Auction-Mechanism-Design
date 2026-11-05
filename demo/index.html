@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mechanism Lab | Assignment 4</title>
+  <style>
+    :root {
+      --ink: #172a3a;
+      --muted: #667b8b;
+      --line: #dce6eb;
+      --paper: #f3f7f8;
+      --card: #ffffff;
+      --teal: #16788b;
+      --teal-light: #dff2f3;
+      --amber: #cf7a20;
+      --violet: #7459a8;
+      --rose: #c25c6c;
+      --shadow: 0 14px 40px rgba(30, 58, 76, .08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 86% 5%, rgba(22,120,139,.12), transparent 26rem),
+        radial-gradient(circle at 4% 0%, rgba(207,122,32,.08), transparent 24rem),
+        var(--paper);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      line-height: 1.45;
+    }
+    .shell { max-width: 1240px; margin: 0 auto; padding: 34px 24px 52px; }
+    header { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; margin-bottom: 24px; }
+    .eyebrow { color: var(--teal); font-size: 12px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+    h1 { font-size: clamp(32px, 4vw, 48px); line-height: 1.03; letter-spacing: -.045em; margin: 8px 0 10px; }
+    header p { margin: 0; max-width: 660px; color: var(--muted); font-size: 16px; }
+    .badge { margin-top: 8px; border: 1px solid rgba(22,120,139,.25); background: rgba(255,255,255,.7); color: var(--teal); border-radius: 999px; padding: 9px 13px; font-size: 12px; font-weight: 750; white-space: nowrap; }
+    .tabs { display: flex; gap: 8px; padding: 7px; background: #e6eef1; border-radius: 16px; width: fit-content; margin: 0 0 18px; }
+    .tab-button { appearance: none; border: 0; background: transparent; color: #5f7482; font: inherit; font-size: 14px; font-weight: 750; padding: 11px 16px; border-radius: 11px; cursor: pointer; transition: .18s ease; }
+    .tab-button:hover { color: var(--ink); }
+    .tab-button[aria-selected="true"] { color: var(--ink); background: white; box-shadow: 0 3px 10px rgba(30,58,76,.08); }
+    .panel { display: none; animation: rise .25s ease both; }
+    .panel.active { display: block; }
+    @keyframes rise { from { opacity: .4; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    .layout { display: grid; grid-template-columns: minmax(280px, .83fr) minmax(420px, 1.45fr); gap: 18px; align-items: stretch; }
+    .card { background: var(--card); border: 1px solid rgba(194,211,220,.75); border-radius: 20px; box-shadow: var(--shadow); }
+    .controls { padding: 22px; }
+    .visual { padding: 20px 22px 16px; min-width: 0; }
+    h2 { font-size: 18px; margin: 0 0 4px; letter-spacing: -.02em; }
+    .sub { color: var(--muted); font-size: 13px; margin: 0 0 20px; }
+    .field { margin: 19px 0; }
+    .field-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+    label, .field-label { color: #415b6b; font-size: 13px; font-weight: 720; }
+    output, .value-pill { color: var(--teal); font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
+    select, input[type="number"] { width: 100%; border: 1px solid var(--line); border-radius: 10px; background: #fbfdfe; color: var(--ink); padding: 10px 12px; font: inherit; font-size: 14px; }
+    input[type="range"] { width: 100%; accent-color: var(--teal); cursor: pointer; }
+    .range-labels { display: flex; justify-content: space-between; color: #90a0a9; font-size: 11px; margin-top: 2px; }
+    .check-row { display: flex; align-items: center; gap: 9px; color: #415b6b; font-size: 13px; font-weight: 700; margin-top: 17px; }
+    .check-row input { accent-color: var(--teal); width: 16px; height: 16px; }
+    .metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin-top: 22px; }
+    .metric { border-radius: 13px; padding: 13px; background: #f4f8f9; min-width: 0; }
+    .metric span { display: block; color: var(--muted); font-size: 11px; margin-bottom: 5px; }
+    .metric strong { display: block; font-size: 19px; letter-spacing: -.03em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+    .metric strong.small { font-size: 15px; }
+    .chart-title { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+    .chart-title .sub { margin-bottom: 10px; }
+    svg.chart { display: block; width: 100%; height: 335px; overflow: visible; }
+    .chart-legend { display: flex; flex-wrap: wrap; gap: 16px; color: var(--muted); font-size: 12px; margin: 2px 3px 0; }
+    .legend-item { display: flex; align-items: center; gap: 7px; }
+    .swatch { display: inline-block; width: 18px; height: 3px; border-radius: 3px; background: var(--teal); }
+    .swatch.dashed { height: 0; border-top: 2px dashed var(--amber); background: transparent; }
+    .swatch.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--rose); }
+    .note { margin-top: 16px; padding: 12px 14px; background: #f5f9fa; border-left: 3px solid var(--teal); border-radius: 0 10px 10px 0; color: #526c7a; font-size: 12px; }
+    .note strong { color: var(--ink); }
+    .vcg-layout { display: grid; grid-template-columns: minmax(310px, .78fr) minmax(440px, 1.42fr); gap: 18px; }
+    .network-wrap { border-radius: 15px; background: linear-gradient(145deg, #f6fafb, #edf4f5); padding: 12px; }
+    svg.network { width: 100%; height: 320px; display: block; }
+    .edge { stroke: #afc1c9; stroke-width: 2.5; fill: none; transition: stroke .18s, stroke-width .18s; }
+    .edge.selected { stroke: var(--teal); stroke-width: 5; }
+    .edge-label { fill: #415b6b; font-size: 12px; font-weight: 750; paint-order: stroke; stroke: #f4f8f9; stroke-width: 5px; stroke-linejoin: round; text-anchor: middle; }
+    .edge-label.selected { fill: #075b6b; }
+    .node { fill: white; stroke: #afc1c9; stroke-width: 2; }
+    .node.source, .node.sink { fill: #dff2f3; stroke: var(--teal); }
+    .node-label { fill: var(--ink); font-size: 14px; font-weight: 850; text-anchor: middle; dominant-baseline: central; }
+    .vcg-lower { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(250px, .8fr); gap: 12px; margin-top: 15px; align-items: stretch; }
+    svg.mini-chart { width: 100%; height: 195px; display: block; }
+    .outcome { padding: 15px; border-radius: 14px; background: #f5f9fa; }
+    .outcome h3 { margin: 0 0 10px; font-size: 13px; }
+    .outcome-row { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px solid #e1eaee; font-size: 12px; color: #627786; }
+    .outcome-row:last-child { border-bottom: 0; }
+    .outcome-row b { color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
+    footer { color: #8a9aa3; font-size: 11px; margin-top: 20px; text-align: center; }
+    @media (max-width: 880px) {
+      .layout, .vcg-layout { grid-template-columns: 1fr; }
+      header { flex-direction: column; }
+      .badge { margin-top: 0; }
+    }
+    @media (max-width: 560px) {
+      .shell { padding: 24px 14px 36px; }
+      .tabs { width: 100%; }
+      .tab-button { flex: 1; padding: 10px 7px; font-size: 12px; }
+      .controls, .visual { padding: 17px; }
+      svg.chart { height: 280px; }
+      .vcg-lower { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div>
+        <div class="eyebrow">Autonomous Systems · Assignment 4</div>
+        <h1>Mechanism Lab</h1>
+        <p>Change bids, values, and reports to see how auction rules shape payoffs. The charts show exact expected outcomes for the models in the assignment.</p>
+      </div>
+      <div class="badge">Interactive · works offline</div>
+    </header>
+
+    <nav class="tabs" role="tablist" aria-label="Mechanism demos">
+      <button class="tab-button" role="tab" aria-selected="true" aria-controls="panel-second" id="tab-second">Second price</button>
+      <button class="tab-button" role="tab" aria-selected="false" aria-controls="panel-first" id="tab-first">First price</button>
+      <button class="tab-button" role="tab" aria-selected="false" aria-controls="panel-vcg" id="tab-vcg">VCG path</button>
+    </nav>
+
+    <section class="panel active" id="panel-second" role="tabpanel" aria-labelledby="tab-second">
+      <div class="layout">
+        <aside class="card controls">
+          <h2>Second-price auction</h2>
+          <p class="sub">Bidder 1 pays the highest rival bid when it wins.</p>
+          <div class="field">
+            <div class="field-head"><label for="sp-value">Bidder 1's true value</label><output id="sp-value-out">0.50</output></div>
+            <select id="sp-value"><option value="0.2">0.20</option><option value="0.5" selected>0.50</option><option value="0.8">0.80</option></select>
+          </div>
+          <div class="field">
+            <div class="field-head"><label for="sp-count">Number of rivals</label></div>
+            <select id="sp-count"><option value="1" selected>1 rival</option><option value="2">2 rivals</option></select>
+          </div>
+          <div class="field">
+            <div class="field-head"><label for="sp-strategy">Rival bidding strategy</label></div>
+            <select id="sp-strategy">
+              <option value="truthful">Truthful value</option>
+              <option value="half-value">Half of value</option>
+              <option value="random-bid">Random bid, independent of value</option>
+            </select>
+          </div>
+          <label class="check-row"><input type="checkbox" id="sp-fixed"> Use fixed rival bid(s)</label>
+          <div class="field" id="sp-fixed-wrap" hidden>
+            <div class="field-head"><label for="sp-rival-bid">Fixed bid for each rival</label><output id="sp-rival-out">0.40</output></div>
+            <input id="sp-rival-bid" type="range" min="0" max="1" step="0.01" value="0.4">
+            <div class="range-labels"><span>0.00</span><span>1.00</span></div>
+          </div>
+          <div class="field">
+            <div class="field-head"><label for="sp-bid">Bidder 1's tested bid</label><output id="sp-bid-out">0.50</output></div>
+            <input id="sp-bid" type="range" min="0" max="1" step="0.01" value="0.5">
+            <div class="range-labels"><span>0.00</span><span>1.00</span></div>
+          </div>
+          <div class="metric-grid">
+            <div class="metric"><span>Utility at tested bid</span><strong id="sp-current-utility">0.000</strong></div>
+            <div class="metric"><span>Best expected utility</span><strong id="sp-best-utility">0.000</strong></div>
+            <div class="metric"><span>Best bid range</span><strong class="small" id="sp-best-bids">—</strong></div>
+            <div class="metric"><span>Truthful bid payoff</span><strong id="sp-truth-utility">0.000</strong></div>
+          </div>
+        </aside>
+        <article class="card visual">
+          <div class="chart-title"><div><h2>Expected utility by bid</h2><p class="sub">A best response maximizes the curve for the selected rival model.</p></div><span class="value-pill" id="sp-chart-tag">v = 0.50</span></div>
+          <svg class="chart" id="sp-chart" role="img" aria-label="Expected utility by bid"></svg>
+          <div class="chart-legend"><span class="legend-item"><i class="swatch"></i>Expected utility</span><span class="legend-item"><i class="swatch dashed"></i>Truthful bid</span><span class="legend-item"><i class="swatch dot"></i>Tested bid</span></div>
+          <div class="note"><strong>Truthfulness check:</strong> in a second-price auction, bidding v is weakly dominant. A different bid can tie its payoff in some cases, so the truthful bid need not be the unique best response.</div>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-first" role="tabpanel" aria-labelledby="tab-first">
+      <div class="layout">
+        <aside class="card controls">
+          <h2>First-price auction</h2>
+          <p class="sub">Rivals use the symmetric equilibrium bid αv, where α=(n−1)/n.</p>
+          <div class="field">
+            <div class="field-head"><label for="fp-n">Number of bidders</label></div>
+            <select id="fp-n"><option value="2">n = 2</option><option value="3" selected>n = 3</option><option value="4">n = 4</option></select>
+          </div>
+          <div class="field">
+            <div class="field-head"><label for="fp-value">Bidder 1's true value</label><output id="fp-value-out">0.50</output></div>
+            <input id="fp-value" type="range" min="0.05" max="1" step="0.01" value="0.5">
+            <div class="range-labels"><span>0.05</span><span>1.00</span></div>
+          </div>
+          <div class="field">
+            <div class="field-head"><label for="fp-k">Bid multiplier k (bid = kv)</label><output id="fp-k-out">0.70</output></div>
+            <input id="fp-k" type="range" min="0.1" max="2" step="0.1" value="0.7">
+            <div class="range-labels"><span>0.1</span><span>2.0</span></div>
+          </div>
+          <div class="metric-grid">
+            <div class="metric"><span>Bidder 1's bid</span><strong id="fp-bid">0.350</strong></div>
+            <div class="metric"><span>Expected utility</span><strong id="fp-utility">0.000</strong></div>
+            <div class="metric"><span>Win probability</span><strong id="fp-win">0%</strong></div>
+            <div class="metric"><span>Equilibrium multiplier</span><strong id="fp-alpha">0.667</strong></div>
+          </div>
+        </aside>
+        <article class="card visual">
+          <div class="chart-title"><div><h2>Deviation payoff curve</h2><p class="sub">The dashed line marks the equilibrium multiplier; the highlighted point is your current k.</p></div><span class="value-pill" id="fp-n-tag">n = 3</span></div>
+          <svg class="chart" id="fp-chart" role="img" aria-label="Expected utility by bid multiplier"></svg>
+          <div class="chart-legend"><span class="legend-item"><i class="swatch"></i>Exact expected utility</span><span class="legend-item"><i class="swatch dashed"></i>Equilibrium multiplier</span><span class="legend-item"><i class="swatch dot"></i>Selected multiplier</span></div>
+          <div class="note"><strong>Winner's bid margin:</strong> with continuous rival values, ties occur with probability zero. In every auction the highest bidder can lower its bid by some positive amount and remain the winner. The script reports this fraction and the average gap to second place.</div>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-vcg" role="tabpanel" aria-labelledby="tab-vcg">
+      <div class="vcg-layout">
+        <aside class="card controls">
+          <h2>VCG shortest path</h2>
+          <p class="sub">Each edge is a supplier with a private cost. The center buys the cheapest A-to-F path.</p>
+          <div class="field">
+            <div class="field-head"><label for="vcg-edge">Edge changing its reported cost</label></div>
+            <select id="vcg-edge">
+              <option value="BE" selected>BE · on truthful path</option><option value="AB">AB · on truthful path</option><option value="EF">EF · on truthful path</option>
+              <option value="AC">AC · off truthful path</option><option value="BD">BD · off truthful path</option><option value="CE">CE · off truthful path</option><option value="CF">CF · off truthful path</option><option value="DF">DF · off truthful path</option>
+            </select>
+          </div>
+          <div class="field">
+            <div class="field-head"><label for="vcg-report">Reported edge cost</label><output id="vcg-report-out">1.0</output></div>
+            <input id="vcg-report" type="range" min="0" max="10" step="0.5" value="1">
+            <div class="range-labels"><span>0</span><span>10</span></div>
+          </div>
+          <div class="metric-grid">
+            <div class="metric"><span>Selected route</span><strong class="small" id="vcg-path">ABEF</strong></div>
+            <div class="metric"><span>Reported route cost</span><strong id="vcg-cost">5.00</strong></div>
+            <div class="metric"><span>Edge payment</span><strong id="vcg-payment">2.00</strong></div>
+            <div class="metric"><span>Edge utility</span><strong id="vcg-utility">1.00</strong></div>
+          </div>
+          <div class="note"><strong>Payment rule:</strong> a selected edge is paid the cheapest route cost without that edge, minus the other selected edges' cost. A non-selected edge receives zero.</div>
+        </aside>
+        <article class="card visual">
+          <div class="chart-title"><div><h2>Transportation network</h2><p class="sub">Labels show true costs; the selected edge's report is shown in teal.</p></div><span class="value-pill">Figure 7.3</span></div>
+          <div class="network-wrap">
+            <svg class="network" id="vcg-network" viewBox="0 0 720 290" role="img" aria-label="Transportation network from A to F"></svg>
+          </div>
+          <div class="vcg-lower">
+            <div>
+              <div class="field-head"><span class="field-label">Agent utility across reports</span><span class="value-pill" id="vcg-truth-tag">true cost 1</span></div>
+              <svg class="mini-chart" id="vcg-chart" role="img" aria-label="VCG edge utility across reported costs"></svg>
+            </div>
+            <div class="outcome">
+              <h3>Truthful reference outcome</h3>
+              <div class="outcome-row"><span>Chosen path</span><b>ABEF</b></div>
+              <div class="outcome-row"><span>Path cost</span><b>5</b></div>
+              <div class="outcome-row"><span>Payments</span><b>AB 4 · BE 2 · EF 3</b></div>
+              <div class="outcome-row"><span>All other edges</span><b>0</b></div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+    <footer>Self-contained demo · no data leaves this page · values and costs follow the assignment specification.</footer>
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const COLORS = { teal: "#16788b", amber: "#cf7a20", rose: "#c25c6c", grid: "#e1eaee", ink: "#526c7a", violet: "#7459a8" };
+    const EDGE_DATA = {
+      AB: { a: "A", b: "B", cost: 3, x1: 89, y1: 137, x2: 235, y2: 68, lx: 163, ly: 91 },
+      AC: { a: "A", b: "C", cost: 2, x1: 89, y1: 153, x2: 235, y2: 221, lx: 163, ly: 201 },
+      BD: { a: "B", b: "D", cost: 2, x1: 265, y1: 55, x2: 435, y2: 55, lx: 350, ly: 45 },
+      BE: { a: "B", b: "E", cost: 1, x1: 264, y1: 71, x2: 437, y2: 218, lx: 350, ly: 133 },
+      CE: { a: "C", b: "E", cost: 3, x1: 265, y1: 235, x2: 435, y2: 235, lx: 350, ly: 260 },
+      CF: { a: "C", b: "F", cost: 5, x1: 265, y1: 225, x2: 628, y2: 155, lx: 452, ly: 207 },
+      DF: { a: "D", b: "F", cost: 2, x1: 464, y1: 67, x2: 628, y2: 137, lx: 547, ly: 91 },
+      EF: { a: "E", b: "F", cost: 1, x1: 464, y1: 222, x2: 628, y2: 153, lx: 547, ly: 194 }
+    };
+    const NODE_POS = { A: [70,145], B: [250,55], C: [250,235], D: [450,55], E: [450,235], F: [650,145] };
+    const PATHS = [["AB","BD","DF"],["AB","BE","EF"],["AC","CE","EF"],["AC","CF"]];
+    const TRUE_COSTS = Object.fromEntries(Object.entries(EDGE_DATA).map(([e,d]) => [e,d.cost]));
+
+    function fmt(x, n=3) { return Number(x).toFixed(n); }
+    function clamp(x, lo, hi) { return Math.max(lo, Math.min(hi, x)); }
+    function esc(text) { return String(text).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+
+    function drawChart(svg, series, options={}) {
+      const width = Math.max(360, Math.round(svg.clientWidth || 600));
+      const height = options.height || 335;
+      const m = {l: 53, r: 16, t: 18, b: 42};
+      const iw = width-m.l-m.r, ih=height-m.t-m.b;
+      const allY = series.flatMap(s => s.points.map(p => p.y)).concat((options.hlines||[]).map(h=>h.y));
+      let yMin = options.yMin ?? Math.min(0, ...allY), yMax = options.yMax ?? Math.max(0.05, ...allY);
+      if (Math.abs(yMax-yMin)<1e-9) { yMax += .05; yMin -= .05; }
+      const pad = (yMax-yMin)*.12; yMin=options.yMin??(yMin-pad); yMax=options.yMax??(yMax+pad);
+      const xMap = x => m.l + (x-options.xMin)/(options.xMax-options.xMin)*iw;
+      const yMap = y => m.t + (yMax-y)/(yMax-yMin)*ih;
+      let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">`;
+      const yTicks=5;
+      for(let i=0;i<=yTicks;i++) {
+        const val=yMin+(yMax-yMin)*i/yTicks, y=yMap(val);
+        s += `<line x1="${m.l}" y1="${y}" x2="${width-m.r}" y2="${y}" stroke="${COLORS.grid}" stroke-width="1"/>`;
+        s += `<text x="${m.l-9}" y="${y+4}" text-anchor="end" fill="#82949e" font-size="11">${val.toFixed(2)}</text>`;
+      }
+      const xTicks=options.xTicks||5;
+      for(let i=0;i<=xTicks;i++) {
+        const val=options.xMin+(options.xMax-options.xMin)*i/xTicks, x=xMap(val);
+        s += `<line x1="${x}" y1="${m.t}" x2="${x}" y2="${height-m.b}" stroke="${COLORS.grid}" stroke-width="1"/>`;
+        s += `<text x="${x}" y="${height-m.b+19}" text-anchor="middle" fill="#82949e" font-size="11">${val.toFixed(options.xDigits??1)}</text>`;
+      }
+      s += `<line x1="${m.l}" y1="${height-m.b}" x2="${width-m.r}" y2="${height-m.b}" stroke="#b9c9d0"/>`;
+      s += `<line x1="${m.l}" y1="${m.t}" x2="${m.l}" y2="${height-m.b}" stroke="#b9c9d0"/>`;
+      for(const h of options.vlines||[]) {
+        const x=xMap(h.x); s += `<line x1="${x}" y1="${m.t}" x2="${x}" y2="${height-m.b}" stroke="${h.color||COLORS.amber}" stroke-width="2" stroke-dasharray="6 5"/>`;
+      }
+      for(const h of options.hlines||[]) {
+        const y=yMap(h.y); s += `<line x1="${m.l}" y1="${y}" x2="${width-m.r}" y2="${y}" stroke="${h.color||COLORS.violet}" stroke-width="1.7" stroke-dasharray="3 5"/>`;
+      }
+      for(const item of series) {
+        const coords=item.points.map(p=>`${xMap(p.x)},${yMap(p.y)}`).join(" ");
+        s += `<polyline points="${coords}" fill="none" stroke="${item.color||COLORS.teal}" stroke-width="${item.width||3}" stroke-linecap="round" stroke-linejoin="round"/>`;
+        if(item.dot) {
+          const p=item.dot; s += `<circle cx="${xMap(p.x)}" cy="${yMap(p.y)}" r="6" fill="${COLORS.rose}" stroke="white" stroke-width="2.5"/>`;
+        }
+      }
+      s += `<text x="${m.l+iw/2}" y="${height-5}" text-anchor="middle" fill="#667b8b" font-size="12">${esc(options.xLabel||"")}</text>`;
+      s += `<text transform="translate(15 ${m.t+ih/2}) rotate(-90)" text-anchor="middle" fill="#667b8b" font-size="12">${esc(options.yLabel||"")}</text>`;
+      s += `</svg>`;
+      svg.innerHTML=s.replace(/^<svg[^>]*>|<\/svg>$/g,"");
+      svg.setAttribute("viewBox",`0 0 ${width} ${height}`);
+    }
+
+    function secondPriceExpected(value, bid, count, strategy, fixed, fixedBid) {
+      if(fixed) {
+        if(bid>fixedBid+1e-10) return value-fixedBid;
+        if(Math.abs(bid-fixedBid)<=1e-10) return (value-fixedBid)/(count+1);
+        return 0;
+      }
+      const support = strategy === "half-value" ? 0.5 : 1;
+      const limit=Math.min(bid,support);
+      if(limit<=0) return 0;
+      const scale = strategy === "half-value" ? Math.pow(2,count) : 1;
+      return scale*Math.pow(limit,count)*(value-(count/(count+1))*limit);
+    }
+    function updateSecondPrice() {
+      const value=Number($("sp-value").value), count=Number($("sp-count").value), strategy=$("sp-strategy").value;
+      const fixed=$("sp-fixed").checked, fixedBid=Number($("sp-rival-bid").value), chosenBid=Number($("sp-bid").value);
+      $("sp-value-out").value=fmt(value,2); $("sp-rival-out").value=fmt(fixedBid,2); $("sp-bid-out").value=fmt(chosenBid,2);
+      $("sp-fixed-wrap").hidden=!fixed; $("sp-chart-tag").textContent=`v = ${fmt(value,2)}`;
+      const points=[];
+      for(let i=0;i<=100;i++) { const b=i/100; points.push({x:b,y:secondPriceExpected(value,b,count,strategy,fixed,fixedBid)}); }
+      const current=secondPriceExpected(value,chosenBid,count,strategy,fixed,fixedBid);
+      const truthful=secondPriceExpected(value,value,count,strategy,fixed,fixedBid);
+      const max=Math.max(...points.map(p=>p.y));
+      const best=points.filter(p=>Math.abs(p.y-max)<0.001).map(p=>p.x);
+      const bestText=best.length>2?`${fmt(best[0],2)}–${fmt(best[best.length-1],2)}`:best.map(x=>fmt(x,2)).join(", ");
+      $("sp-current-utility").textContent=fmt(current); $("sp-best-utility").textContent=fmt(max);
+      $("sp-best-bids").textContent=bestText||"—"; $("sp-truth-utility").textContent=fmt(truthful);
+      const chosenPoint={x:chosenBid,y:current};
+      drawChart($("sp-chart"),[{points,color:COLORS.teal,dot:chosenPoint}],{xMin:0,xMax:1,xTicks:5,xDigits:1,xLabel:"Bidder 1 bid",yLabel:"Expected utility",vlines:[{x:value,color:COLORS.amber}],height:335});
+    }
+
+    function firstPriceExact(value,n,k) {
+      const alpha=(n-1)/n, bid=k*value;
+      const win=bid<=0?0:(bid>=alpha?1:Math.pow(bid/alpha,n-1));
+      return {utility:(value-bid)*win, win, bid, alpha};
+    }
+    function updateFirstPrice() {
+      const n=Number($("fp-n").value), value=Number($("fp-value").value), k=Number($("fp-k").value);
+      $("fp-value-out").value=fmt(value,2); $("fp-k-out").value=fmt(k,2); $("fp-n-tag").textContent=`n = ${n}`;
+      const current=firstPriceExact(value,n,k);
+      $("fp-bid").textContent=fmt(current.bid); $("fp-utility").textContent=fmt(current.utility); $("fp-win").textContent=`${fmt(current.win*100,1)}%`;
+      $("fp-alpha").textContent=fmt(current.alpha,3);
+      const points=[];
+      for(let i=1;i<=20;i++) { const x=i/10, q=firstPriceExact(value,n,x); points.push({x,y:q.utility}); }
+      drawChart($("fp-chart"),[{points,color:COLORS.teal,dot:{x:k,y:current.utility}}],{xMin:.1,xMax:2,xTicks:5,xDigits:1,xLabel:"Bid multiplier k",yLabel:"Expected utility",vlines:[{x:current.alpha,color:COLORS.amber}],height:335});
+    }
+
+    function pathsFor(costs) {
+      return PATHS.map(edges=>({edges,cost:edges.reduce((sum,e)=>sum+costs[e],0),name:"A"+edges.map(e=>e[1]).join("")}))
+        .sort((a,b)=>Math.abs(a.cost-b.cost)<1e-10?a.name.localeCompare(b.name):a.cost-b.cost);
+    }
+    function vcgOutcome(costs) {
+      const paths=pathsFor(costs), chosen=paths[0], payments=Object.fromEntries(Object.keys(EDGE_DATA).map(e=>[e,0]));
+      for(const edge of chosen.edges) {
+        const without=paths.filter(p=>!p.edges.includes(edge));
+        payments[edge]=without[0].cost-(chosen.cost-costs[edge]);
+      }
+      return {...chosen,payments};
+    }
+    function getReportedOutcome(edge, report) {
+      const costs={...TRUE_COSTS,[edge]:report};
+      const outcome=vcgOutcome(costs), trueCost=TRUE_COSTS[edge];
+      const selected=outcome.edges.includes(edge), payment=selected?outcome.payments[edge]:0;
+      return {...outcome,selected,payment,utility:selected?payment-trueCost:0,trueCost};
+    }
+    function renderNetwork(edge, report, outcome) {
+      let s=`<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#aabdc5"/></marker><marker id="arrowSel" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="${COLORS.teal}"/></marker></defs>`;
+      const chosen=new Set(outcome.edges);
+      for(const [name,data] of Object.entries(EDGE_DATA)) {
+        const selected=chosen.has(name), x2=data.x2, y2=data.y2;
+        s+=`<line class="edge ${selected?'selected':''}" x1="${data.x1}" y1="${data.y1}" x2="${x2}" y2="${y2}" marker-end="url(#${selected?'arrowSel':'arrow'})"/>`;
+        const label=name===edge?`${name} · ${fmt(report,1)} (report)`: `${name} · ${fmt(data.cost,0)}`;
+        const pay=selected?` · paid ${fmt(outcome.payments[name],0)}`:"";
+        s+=`<text class="edge-label ${selected?'selected':''}" x="${data.lx}" y="${data.ly}">${esc(label+pay)}</text>`;
+      }
+      for(const [name,[x,y]] of Object.entries(NODE_POS)) {
+        const type=(name==="A"||name==="F")?` ${name==="A"?'source':'sink'}`:"";
+        s+=`<circle class="node${type}" cx="${x}" cy="${y}" r="21"/><text class="node-label" x="${x}" y="${y}">${name}</text>`;
+      }
+      $("vcg-network").innerHTML=s;
+    }
+    function updateVCG() {
+      const edge=$("vcg-edge").value, report=Number($("vcg-report").value), trueCost=TRUE_COSTS[edge];
+      $("vcg-report").min=0; $("vcg-report").max=10; $("vcg-report").step=.5;
+      $("vcg-report-out").value=fmt(report,1); $("vcg-truth-tag").textContent=`true cost ${fmt(trueCost,0)}`;
+      const outcome=getReportedOutcome(edge,report);
+      $("vcg-path").textContent=outcome.name; $("vcg-cost").textContent=fmt(outcome.cost,2);
+      $("vcg-payment").textContent=fmt(outcome.payment,2); $("vcg-utility").textContent=fmt(outcome.utility,2);
+      renderNetwork(edge,report,outcome);
+      const points=[];
+      for(let i=0;i<=20;i++) { const r=i*.5; points.push({x:r,y:getReportedOutcome(edge,r).utility}); }
+      const base=getReportedOutcome(edge,trueCost).utility;
+      drawChart($("vcg-chart"),[{points,color:COLORS.teal,dot:{x:report,y:outcome.utility}}],{xMin:0,xMax:10,xTicks:5,xDigits:0,xLabel:"Reported cost",yLabel:"Agent utility",vlines:[{x:trueCost,color:COLORS.amber}],hlines:[{y:base,color:COLORS.violet}],height:195});
+    }
+
+    const tabs=[...document.querySelectorAll(".tab-button")];
+    tabs.forEach(button=>button.addEventListener("click",()=>{
+      tabs.forEach(b=>b.setAttribute("aria-selected",String(b===button)));
+      document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("active",p.id===button.getAttribute("aria-controls")));
+      requestAnimationFrame(()=>{ updateSecondPrice(); updateFirstPrice(); updateVCG(); });
+    }));
+    ["sp-value","sp-count","sp-strategy","sp-fixed","sp-rival-bid","sp-bid"].forEach(id=>$(id).addEventListener("input",updateSecondPrice));
+    ["fp-n","fp-value","fp-k"].forEach(id=>$(id).addEventListener("input",updateFirstPrice));
+    ["vcg-edge","vcg-report"].forEach(id=>$(id).addEventListener("input",updateVCG));
+    window.addEventListener("resize",()=>{updateSecondPrice();updateFirstPrice();updateVCG();});
+    updateSecondPrice(); updateFirstPrice(); updateVCG();
+  </script>
+</body>
+</html>
