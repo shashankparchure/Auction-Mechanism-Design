@@ -18,63 +18,147 @@
 \definecolor{deepteal}{HTML}{176B87}
 
 \title{Assignment 4: Auction Mechanisms\\\large Simulation and Incentive Analysis}
-\author{}
+\author{%
+  \begin{tabular}{cc}
+    Shashank Parchure (B23CM1059) & Saher Dev (B23CS1059)\\
+    Soham Khairnar (B23CM1039)    & Sarthak Kolekar (B23CM1065)
+  \end{tabular}%
+}
 \date{November 5, 2026}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-This report studies second-price auctions with one and two rivals, first-price bidding against equilibrium rivals, and VCG procurement of a least-cost path. Monte Carlo estimates are compared with analytical predictions. The second-price experiments support truthful bidding as a best response across the tested rival strategies. In the first-price experiment, the highest tested expected utility occurs near the equilibrium bid multiplier. The VCG example selects path ABEF, pays the three selected edges 4, 2, and 3, and gives no profitable gain from either tested cost misreport.
+This report implements and tests three mechanisms. Part~1 is the second-price sealed-bid auction. We test every bid of bidder~1 against one or two rival bidders, and confirm that bidding one's true value ($b=v$) always gives the highest utility. Part~2 is the first-price auction with $n=2,3,4$ bidders. Bidder~1 deviates from the equilibrium bid. Its expected utility is highest exactly at the equilibrium multiplier $(n-1)/n$, and the winner could almost always have paid less and still won. Part~3 is the VCG mechanism for buying the cheapest path in a network. We reproduce the path ABEF and the payments $4$, $2$ and $3$ from the textbook, and show that misreporting a cost never increases an edge agent's utility. In Parts~1 and~2, the simulation results agree closely with the exact values derived from theory.
 \end{abstract}
 
-\section{Experimental setup}
+\section{Introduction}
 
-The simulations follow the supplied assignment brief \cite{assignment4}. Random private values are independently drawn from the uniform distribution on $[0,1]$. The scripts use NumPy's seeded random-number generator. For each second-price value/strategy combination, 100,000 rival bid samples are reused across the 101 focal bids; this common-random-number design makes neighboring payoff estimates less noisy while preserving the Monte Carlo expectation. Part 2 uses 200,000 auctions for each number of bidders.
+An auction is a set of rules that decides who gets an item and how much they pay. A good mechanism should give each participant a reason to report its true value. This property is called \emph{truthfulness} or \emph{incentive compatibility}. This assignment checks this property by simulation for three mechanisms:
 
-The brief's Part 1C sentence says to repeat ``parts A and C.'' I interpret this as ``parts A and B,'' so the two-rival implementation includes both the stochastic payoff sweeps and the fixed-rival truthfulness check. For that check, both rivals use the listed fixed bid. Tied highest bids split the allocation uniformly.
+\begin{enumerate}
+  \item \textbf{Second-price auction (Part 1):} the highest bidder wins and pays the second-highest bid. Theory says bidding your true value is a dominant strategy.
+  \item \textbf{First-price auction (Part 2):} the highest bidder wins and pays its own bid. Here bidding your true value is not optimal; bidders should shade (lower) their bids.
+  \item \textbf{VCG mechanism (Part 3):} a general mechanism that pays each participant according to the harm its presence causes to the others. It is used here to buy the cheapest path in a network.
+\end{enumerate}
 
-Part 2 does not specify bidder 1's value, although it specifies that the other bidders draw uniform values. I hold bidder 1's value at $v=0.5$, matching the experiment command, and state the result so this assumption is visible. The tested multipliers are $k=0.1,0.2,\ldots,2.0$. The ``could have paid less and still won'' statistic counts auctions in which the winner's bid exceeds the runner-up bid by more than a numerical tolerance. I also report the average bid gap, since the fraction is nearly always one under continuous random bids.
 
-For Part 3, I use the directed edge costs in the transportation network referenced by the handout and the VCG pivot payment rule. When route costs tie during a misreport sweep, the lexicographically earlier node path is selected to make the result deterministic.
+\section{Common setup}
 
-\section{Second-price auction}
+\subsection{Notation}
 
-Bidder 1 wins when its bid $b$ is at least the highest rival bid $Y$ and then pays $Y$. Its utility in a given auction is $v-Y$ if it wins and zero otherwise. The expected utility is therefore
-\[
-  U(b)=\mathbb{E}\left[(v-Y)\,\mathbf{1}\{Y\leq b\}\right].
-\]
+\begin{itemize}
+  \item $v$: bidder~1's true value for the item (how much the item is worth to it).
+  \item $b$: bidder~1's bid.
+  \item \emph{Utility} (profit): value minus price paid if the bidder wins, and $0$ if it loses.
+  \item $U(b)$: bidder~1's \emph{expected} (average) utility when it bids $b$.
+  \item $U[0,1]$: the uniform distribution on $[0,1]$. All random values in this assignment are drawn independently from it.
+\end{itemize}
 
-\subsection{One rival: stochastic strategies}
+\subsection{Implementation}
 
-With one rival, truthful bidding and random bidding independent of value both produce a uniform rival bid on $[0,1]$. Their theoretical curves are identical:
-\[
-  U_{\text{uniform}}(b)=vb-\frac{b^2}{2}.
-\]
-When the rival bids half its value, its bid is uniform on $[0,0.5]$, giving
-\[
-  U_{\text{half}}(b)=
-  \begin{cases}
-    2vb-b^2, & 0\leq b\leq 0.5,\\
-    v-0.25, & 0.5\leq b\leq 1.
-  \end{cases}
-\]
-The uniform-bid curve is maximized at $b=v$. Against half-value bids, $b=v$ is optimal for $v\leq 0.5$; for $v>0.5$, all bids at least $0.5$ give the same maximum because the rival never bids above $0.5$.
-
-Figure~\ref{fig:part1a} shows the nine simulated curves. The observed maxima occur at the truthful bid for truthful and random rivals. For half-value rivals, the maximizing bid is $0.20$ when $v=0.20$, and any grid bid from $0.50$ through $1.00$ when $v=0.50$ or $0.80$. Thus truthful bidding is a best response for all tested rival models, though in some half-value cases it is not the unique best response. The random-bid and truthful-rival estimates differ slightly because they use independent samples, but both track the same theoretical curve.
+All code is written in Python using NumPy (for random numbers and calculations) and Matplotlib (for plots). Each part has its own script, and shared auction logic is in \texttt{auction\_core.py}:
 
 \begin{table}[H]
 \centering
-\caption{Maximum estimated utility in Part 1A (100,000 auctions per case).}
+\small
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+File & Purpose\\
+\midrule
+\texttt{auction\_core.py} & Shared functions: rival bid sampling, second-price utility, first-price theory, VCG path selection and payments\\
+\texttt{part1a\_second\_price\_single\_rival.py} & Part 1A: utility curves against one rival\\
+\texttt{part1b\_second\_price\_fixed\_rival.py} & Part 1B: utility against a fixed rival bid\\
+\texttt{part1c\_second\_price\_two\_rivals.py} & Part 1C: Parts 1A and 1B repeated with two rivals\\
+\texttt{part2\_first\_price.py} & Part 2: first-price deviations for $n=2,3,4$\\
+\texttt{part3\_vcg\_shortest\_path.py} & Part 3: VCG path procurement and misreport sweeps\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Each script writes its raw results as CSV files and its plots as PNG images in the \texttt{results/} folder. Every random experiment uses a fixed random seed, so running a script again gives exactly the same numbers.
+
+\emph{Monte Carlo simulation} means estimating an average by simulating many random auctions and averaging the outcomes. With 100,000 or more auctions, the estimates are accurate to about three decimal places. To confirm the code is correct, we also derived the exact expected utility from theory for every case and compared it with the simulated value.
+
+\subsection{Assumptions}
+
+We made the following choices based on the assignment details:
+
+\begin{enumerate}
+  \item \textbf{Part 1C wording.} The task says ``Repeat parts A and C''. Since Part C cannot repeat itself, we read this as ``Repeat parts A and B'' and did both with two rivals.
+  \item \textbf{Ties.} With continuous random bids, two bids are exactly equal with probability zero, so ties do not affect the simulations. In the fixed-bid checks (Parts 1B and 1C), a tie is split equally between the tied bidders.
+  \item \textbf{Part 2 value of bidder~1.} The task gives the distribution of the other bidders' values but not bidder~1's value. We fix bidder~1's value at $v=0.5$. The script accepts any other value with \texttt{--value}.
+  \item \textbf{Part 3 ties between paths.} If two paths have the same reported cost, the path whose name comes first alphabetically is chosen. This keeps the results deterministic.
+\end{enumerate}
+
+\section{Part 1: Second-price sealed-bid auction}
+
+\subsection{What the task asked}
+
+Bidder~1 has a fixed value $v\in\{0.2, 0.5, 0.8\}$. Each rival bidder draws its value from $U[0,1]$ and follows one of three strategies:
+\begin{enumerate}
+  \item[(a)] \textbf{truthful:} bid its true value;
+  \item[(b)] \textbf{half-value:} bid half of its true value;
+  \item[(c)] \textbf{random-bid:} ignore its value and bid a fresh random number from $U[0,1]$.
+\end{enumerate}
+If bidder~1 wins, it pays the highest rival bid $Y$ and its utility is $v-Y$. If it loses, its utility is $0$. The tasks were:
+\begin{itemize}
+  \item \textbf{1A:} for each of the $3\times3=9$ combinations of value and rival strategy, try every bid $b=0.00,0.01,\ldots,1.00$, simulate at least 100,000 auctions per bid, and plot the average utility. Then answer: do these plots help bidder~1 choose its strategy?
+  \item \textbf{1B:} fix the rival's bid at $0.1$, $0.4$ and $0.9$, and confirm that $b=v$ gives the highest utility in each case.
+  \item \textbf{1C:} repeat 1A and 1B with two rivals who both use the same strategy.
+\end{itemize}
+
+\subsection{How we implemented it}
+
+For each value and strategy, the script draws 100,000 random rival bids. It then tests all 101 bids of bidder~1 against these same 100,000 auctions. So every bid is evaluated on 100,000 auctions, as required. Using the same auctions for every bid is a standard technique: differences between neighbouring bids then come from the bid itself, not from random noise, which makes the curves smooth.
+
+In each auction, bidder~1 wins if $b\geq Y$, where $Y$ is the highest rival bid. The utility is $v-Y$ for a win and $0$ for a loss, and the average over all 100,000 auctions gives $U(b)$.
+
+\paragraph{Exact expected utility.} The expected utility can also be calculated exactly:
+\[
+  U(b)=\mathbb{E}\big[(v-Y)\cdot\mathbf{1}\{Y\leq b\}\big],
+\]
+which is the average profit counted only over the auctions bidder~1 wins. With one rival:
+\begin{itemize}
+  \item \textbf{Truthful and random-bid rivals} both produce a bid uniform on $[0,1]$, so they give the same curve:
+  \[
+    U(b)=vb-\frac{b^2}{2}.
+  \]
+  \item \textbf{A half-value rival} bids uniformly on $[0,0.5]$, so
+  \[
+    U(b)=
+    \begin{cases}
+      2vb-b^2, & 0\leq b\leq 0.5,\\
+      v-0.25, & 0.5\leq b\leq 1.
+    \end{cases}
+  \]
+\end{itemize}
+In both cases $U(b)$ is largest at $b=v$. For the half-value rival with $v\geq0.5$, every bid of at least $0.5$ gives the same utility, because the rival never bids more than $0.5$.
+
+\subsection{Part 1A results: one rival}
+\label{sec:part1a}
+
+Figure~\ref{fig:part1a} shows the nine utility curves, and Table~\ref{tab:part1a} compares the simulated utility at $b=v$ with the exact value.
+
+\begin{table}[H]
+\centering
+\caption{Part 1A: bidder~1's utility at the truthful bid $b=v$ (one rival, 100,000 auctions per bid).}
 \label{tab:part1a}
 \small
-\begin{tabular}{ccccc}
+\begin{tabular}{cccccc}
 \toprule
-Value $v$ & Truthful rival & Half-value rival & Random-bid rival & Maximizing bids\\
+Value $v$ & Rival strategy & Simulated $U(v)$ & Exact $U(v)$ & Best bid(s) in simulation & $b=v$ is best?\\
 \midrule
-0.20 & 0.019873 & 0.039799 & 0.020154 & $0.20$\\
-0.50 & 0.124927 & 0.250227 & 0.125363 & $0.50$; half: $[0.50,1.00]$\\
-0.80 & 0.320888 & 0.549808 & 0.321576 & $0.80$; half: $[0.50,1.00]$\\
+0.2 & truthful   & 0.019873 & 0.020000 & 0.20 & Yes\\
+0.2 & half-value & 0.039799 & 0.040000 & 0.20 & Yes\\
+0.2 & random-bid & 0.020154 & 0.020000 & 0.20 & Yes\\
+0.5 & truthful   & 0.124927 & 0.125000 & 0.50 & Yes\\
+0.5 & half-value & 0.250227 & 0.250000 & 0.50--1.00 (all equal) & Yes\\
+0.5 & random-bid & 0.125363 & 0.125000 & 0.50 & Yes\\
+0.8 & truthful   & 0.320888 & 0.320000 & 0.80 & Yes\\
+0.8 & half-value & 0.549808 & 0.550000 & 0.50--1.00 (all equal) & Yes\\
+0.8 & random-bid & 0.321576 & 0.320000 & 0.80 & Yes\\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -82,117 +166,257 @@ Value $v$ & Truthful rival & Half-value rival & Random-bid rival & Maximizing bi
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.98\linewidth]{figures/part1a_all_nine.png}
-  \caption{Part 1A: bidder 1's average utility over the 101 tested bids, shown for all three values and rival strategies. The dashed line marks $b=v$.}
+  \caption{Part 1A: bidder~1's average utility for each of the 101 bids, for every value (rows) and rival strategy (columns). The dashed line marks the truthful bid $b=v$.}
   \label{fig:part1a}
 \end{figure}
 
-\subsection{Fixed rival bid}
+\paragraph{Do these plots help bidder~1 select its strategy?} Yes. In all nine plots, the curve reaches its highest point at $b=v$. Bidding lower than $v$ loses auctions bidder~1 would have won at a profit. Bidding higher than $v$ wins extra auctions only when the rival's bid is above $v$, and those wins have negative profit.
 
-For a fixed rival bid $r$, any bid below $r$ loses and gives utility zero. A bid above $r$ wins and gives $v-r$. At $b=r$, the tie is split equally. If $r<v$, winning is profitable; if $r>v$, winning has negative utility. Bidding $b=v$ therefore gives the highest utility in each case. It may tie other bids in utility, so this is weak dominance rather than a unique optimum.
+An important point is that the best bid is $b=v$ for \emph{every} rival strategy. So bidder~1 does not even need to know which strategy the rival uses: bidding truthfully is always a best choice. This is what it means for truthful bidding to be a \emph{dominant strategy}. In the half-value cases with $v\geq0.5$, other bids tie with $b=v$, so truthful bidding is \emph{weakly} dominant: never worse than any other bid, though not always strictly better.
 
-The nine combinations of $v\in\{0.2,0.5,0.8\}$ and $r\in\{0.1,0.4,0.9\}$ all passed the grid check: truthful bidding attained the maximum in 9 of 9 cases. Figure~\ref{fig:part1b} shows the corresponding best-response curves.
+The simulated values differ from the exact values by less than $0.002$. This difference is normal Monte Carlo noise. The truthful and random-bid curves have the same exact formula; their simulated values differ slightly because each uses its own random sample.
 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.98\linewidth]{figures/part1b_fixed_rival.png}
-  \caption{Part 1B: utility against a fixed rival bid. The truthful bid and rival bid are marked in each panel.}
-  \label{fig:part1b}
-\end{figure}
+\subsection{Part 1B results: fixed rival bid}
 
-\subsection{Two rivals}
-
-With two rivals, $Y$ is the maximum of their bids. For truthful or independent random bids, $Y$ has density $2y$ on $[0,1]$, so
-\[
-  U_{\text{uniform},2}(b)=vb^2-\frac{2}{3}b^3.
-\]
-For two half-value rivals, the density of $Y$ is $8y$ on $[0,0.5]$. Hence
-\[
-  U_{\text{half},2}(b)=
-  \begin{cases}
-    4vb^2-\dfrac{8}{3}b^3, & 0\leq b\leq 0.5,\\
-    v-\dfrac{1}{3}, & 0.5\leq b\leq 1.
-  \end{cases}
-\]
-The observed truthful/random maxima remain at $b=v$. For half-value rivals, the empirical maximizing bid is $v=0.20$ for the lowest value and the interval $[0.50,1.00]$ at $v=0.50$ and $0.80$. The expected payoffs are lower than in the one-rival case because bidder 1 must outbid the maximum of two rival bids.
+When the rival's bid $r$ is fixed, there is no randomness, so each utility is calculated exactly rather than simulated:
+\begin{itemize}
+  \item if $b<r$, bidder~1 loses and gets $0$;
+  \item if $b>r$, bidder~1 wins, pays $r$ and gets $v-r$;
+  \item if $b=r$, the tie is split and bidder~1 gets $(v-r)/2$.
+\end{itemize}
+The script evaluates all 101 bids for each of the $3\times3=9$ combinations of $v\in\{0.2,0.5,0.8\}$ and $r\in\{0.1,0.4,0.9\}$. It then checks whether $b=v$ reaches the maximum utility.
 
 \begin{table}[H]
 \centering
-\caption{Maximum estimated utility in Part 1C's two-rival stochastic experiments.}
-\label{tab:part1c}
+\caption{Part 1B: utility at $b=v$, which equals the highest utility over all 101 bids in every case.}
+\label{tab:part1b}
 \small
-\begin{tabular}{ccccc}
+\begin{tabular}{cccc}
 \toprule
-Value $v$ & Truthful rival strategy & Half-value strategy & Random-bid strategy & Maximizing bids\\
+ & Rival bid $r=0.1$ & $r=0.4$ & $r=0.9$\\
 \midrule
-0.20 & 0.002625 & 0.010687 & 0.002609 & $0.20$\\
-0.50 & 0.041818 & 0.166607 & 0.041533 & $0.50$; half: $[0.50,1.00]$\\
-0.80 & 0.170962 & 0.466525 & 0.170219 & $0.80$; half: $[0.50,1.00]$\\
+$v=0.2$ & 0.1 & 0.0 & 0.0\\
+$v=0.5$ & 0.4 & 0.1 & 0.0\\
+$v=0.8$ & 0.7 & 0.4 & 0.0\\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The fixed-rival extension sets both rival bids to $r$ and divides a tie among the three highest bidders. Truthful bidding attains the maximum in all 9 value/rival combinations. Figures~\ref{fig:part1c} and~\ref{fig:part1cfixed} show the stochastic and fixed-bid results, respectively.
-
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.98\linewidth]{figures/part1c_two_rivals.png}
-  \caption{Part 1C: simulated utility curves with two rivals using the same strategy.}
-  \label{fig:part1c}
+  \includegraphics[width=0.98\linewidth]{figures/part1b_fixed_rival.png}
+  \caption{Part 1B: utility against a fixed rival bid. The dashed line marks the truthful bid $b=v$; the dotted line marks the rival's bid.}
+  \label{fig:part1b}
 \end{figure}
 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.98\linewidth]{figures/part1c_fixed_two_rivals.png}
-  \caption{Part 1C fixed-bid check: both rivals bid the listed amount; ties at the shared bid are split three ways.}
-  \label{fig:part1cfixed}
-\end{figure}
+Truthful bidding gives the highest utility in all 9 of 9 cases. The reason is simple. If $r<v$, bidding $v$ wins and earns the positive profit $v-r$. If $r>v$, bidding $v$ loses and avoids the loss $v-r<0$ that winning would bring. Importantly, the price paid is $r$, which bidder~1 cannot change by changing its bid. Bidder~1's bid only decides \emph{whether} it wins, and $b=v$ makes it win exactly when winning is profitable. Since this holds for any value of $r$, truthful bidding is effective against every rival bid.
 
-\section{First-price auction}
 
-For $n$ bidders, the $n-1$ rivals bid their equilibrium bid $\alpha x$, where $\alpha=(n-1)/n$ and $x$ is their uniform value. Bidder 1 has value $v=0.5$ and bids $b=kv$. For $b<\alpha$, each rival's bid is below $b$ with probability $b/\alpha$. Thus
-\[
-  \Pr(\text{win})=\min\left\{\left(\frac{kv}{\alpha}\right)^{n-1},1\right\},
-  \qquad
-  \mathbb{E}[u_1]=(v-kv)\Pr(\text{win}).
-\]
-The continuous optimum is $k=\alpha$. For the required discrete grid, the simulated maximum occurs at $k=0.5$ for $n=2$, and at $k=0.7$ for both $n=3$ and $n=4$. The continuous optimum for $n=4$ is $0.75$, between two grid points; on the grid, the exact expectation at $k=0.7$ is slightly above that at $k=0.8$.
 
-At the continuous equilibrium multiplier, the conditional expected utility is $v^n/n$. For $v=0.5$, this gives $0.125000$, $0.041667$, and $0.015625$ for $n=2,3,4$, respectively. The exact expectations in Table~\ref{tab:part2} are evaluated at the discrete multipliers actually tested.
+\subsection{Part 1C results: two rivals}
+
+With two rivals, bidder~1 must beat the higher of the two rival bids, $Y=\max(\text{bid}_2,\text{bid}_3)$. Both rivals draw their values independently from $U[0,1]$ and use the same strategy. The method is otherwise identical to 1A and 1B.The exact expected utilities change because $Y$ is now the maximum of two bids:
+\begin{itemize}
+  \item \textbf{Truthful and random-bid rivals:}
+  \[
+    U(b)=vb^2-\frac{2}{3}b^3.
+  \]
+  \item \textbf{Half-value rivals:}
+  \[
+    U(b)=
+    \begin{cases}
+      4vb^2-\dfrac{8}{3}b^3, & 0\leq b\leq 0.5,\\[4pt]
+      v-\dfrac{1}{3}, & 0.5\leq b\leq 1.
+    \end{cases}
+  \]
+\end{itemize}
+Again, both formulas are largest at $b=v$.
 
 \begin{table}[H]
 \centering
-\caption{Part 2: best tested multiplier by empirical expected utility. Each $n$ uses 200,000 auctions.}
+\caption{Part 1C: bidder~1's utility at the truthful bid $b=v$ (two rivals, 100,000 auctions per bid).}
+\label{tab:part1c}
+\small
+\begin{tabular}{cccccc}
+\toprule
+Value $v$ & Rival strategy & Simulated $U(v)$ & Exact $U(v)$ & Best bid(s) in simulation & $b=v$ is best?\\
+\midrule
+0.2 & truthful   & 0.002625 & 0.002667 & 0.20 & Yes\\
+0.2 & half-value & 0.010687 & 0.010667 & 0.20 & Yes\\
+0.2 & random-bid & 0.002609 & 0.002667 & 0.20 & Yes\\
+0.5 & truthful   & 0.041818 & 0.041667 & 0.50 & Yes\\
+0.5 & half-value & 0.166607 & 0.166667 & 0.50--1.00 (all equal) & Yes\\
+0.5 & random-bid & 0.041533 & 0.041667 & 0.50 & Yes\\
+0.8 & truthful   & 0.170962 & 0.170667 & 0.80 & Yes\\
+0.8 & half-value & 0.466525 & 0.466667 & 0.50--1.00 (all equal) & Yes\\
+0.8 & random-bid & 0.170219 & 0.170667 & 0.80 & Yes\\
+\bottomrule
+\end{tabular}
+\end{table}
+For the fixed-bid check, both rivals bid the same fixed amount $r\in\{0.1,0.4,0.9\}$, and a three-way tie is split equally. The utility at $b=v$ is the same as in Table~\ref{tab:part1b}, and truthful bidding again gives the highest utility in all 9 of 9 cases (Figure~\ref{fig:part1cfixed}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.80\linewidth]{figures/part1c_two_rivals.png}
+  \caption{Part 1C: simulated utility curves with two rivals using the same strategy. The dashed line marks $b=v$.}
+  \label{fig:part1c}
+\end{figure}
+
+
+
+\paragraph{Effect of the second rival.} Truthful bidding remains the best strategy with two rivals. What changes is the level of utility: it is lower than with one rival, because bidder~1 now has to beat the higher of two bids and so wins less often. For example, at $v=0.5$ against truthful rivals, the expected utility falls from $0.125$ to $0.042$.
+
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\linewidth]{figures/part1c_fixed_two_rivals.png}
+  \caption{Part 1C fixed-bid check: both rivals bid the listed amount; a tie at that amount is split three ways.}
+  \label{fig:part1cfixed}
+\end{figure}
+
+
+
+\section{Part 2: First-price auction}
+\label{sec:part2}
+
+\subsection{What the task asked}
+
+In a first-price auction, the highest bidder wins and pays its own bid. There are $n$ bidders. Bidders $2,\ldots,n$ draw their values from $U[0,1]$ and use the known equilibrium bid
+\[
+  \text{bid}=\alpha\cdot\text{value},\qquad \alpha=\frac{n-1}{n}.
+\]
+Bidder~1 deviates and bids $k\cdot v$, with $k$ chosen from a grid between $0.1$ and $2.0$. The tasks were:
+\begin{enumerate}
+  \item estimate bidder~1's expected utility for each $k$;
+  \item measure the fraction of auctions in which the winner could have paid less and still won;
+  \item show the results for $n=2,3,4$.
+\end{enumerate}
+
+\subsection{How we implemented it}
+
+Bidder~1's value is fixed at $v=0.5$ (Assumption~3). For each $n$, the script simulates 200,000 auctions. In each auction it draws the $n-1$ rival values and computes their equilibrium bids. Bidder~1's bid $kv$ is then tested against these same auctions for every $k$.
+
+The tested multipliers are $k=0.1,0.2,\ldots,2.0$, plus the exact equilibrium value $\alpha$ for each $n$. We added $\alpha$ because $2/3$ (for $n=3$) and $0.75$ (for $n=4$) are not on the $0.1$ grid, and without them the experiment could not show the optimum exactly.
+
+\paragraph{Exact expected utility.} Each rival bids at most $\alpha$, and a rival's bid is below $b$ with probability $b/\alpha$. Bidder~1 wins when all $n-1$ rival bids are below its bid, so
+\[
+  \Pr(\text{win})=\min\left\{\left(\frac{kv}{\alpha}\right)^{n-1},\,1\right\},
+  \qquad
+  U(k)=(v-kv)\cdot\Pr(\text{win}).
+\]
+This shows the trade-off in a first-price auction. A higher bid wins more often but leaves less profit per win. Setting the derivative of $(1-k)\,k^{n-1}$ to zero gives the best multiplier:
+\[
+  \frac{d}{dk}\Big[(1-k)\,k^{n-1}\Big]=k^{n-2}\big[(n-1)(1-k)-k\big]=0
+  \quad\Longrightarrow\quad
+  k^*=\frac{n-1}{n}=\alpha.
+\]
+So bidder~1's best response is to use the same multiplier as everyone else, which is exactly what makes $\alpha v$ an equilibrium. At $k=\alpha$, the expected utility is $v^n/n$.
+
+\paragraph{``Could have paid less and still won''.} In each auction, the \emph{winner} is whoever has the highest bid, and the \emph{margin} is the gap between the winning bid and the second-highest bid. The winner could have bid anything above the second-highest bid and still won, so the margin is money it did not need to pay. We measure this in three ways:
+\begin{enumerate}
+  \item \textbf{Strict:} the fraction of auctions where the margin is greater than zero.
+  \item \textbf{With a bid increment of $0.01$:} the fraction of auctions where the winner could have bid $0.01$ less and still won (margin $>0.01$). Real auctions have a minimum bid step, so this is the more practical measure.
+  \item \textbf{Bidder~1's wins only:} the same $0.01$ measure, counted only over the auctions that bidder~1 won.
+\end{enumerate}
+We also report the average margin and bidder~1's average overpayment (its margin when it wins).
+
+\subsection{Results}
+
+Figure~\ref{fig:part2} shows the results for all tested multipliers, and Table~\ref{tab:part2} summarises the best multiplier for each $n$.
+
+\begin{table}[H]
+\centering
+\caption{Part 2: best multiplier for bidder~1 ($v=0.5$, 200,000 auctions per $n$).}
 \label{tab:part2}
 \small
 \resizebox{\linewidth}{!}{%
-\begin{tabular}{cccccccc}
+\begin{tabular}{ccccccc}
 \toprule
-$n$ & Continuous $k^*$ & Best grid $k$ & Simulated $\mathbb{E}[u_1]$ & Exact at grid $k$ & Simulated win rate & Can lower fraction & Mean winner margin\\
+$n$ & Equilibrium $k^*=\alpha$ & Best tested $k$ & Simulated $U$ & Exact $U=v^n/n$ & Simulated win rate & Simulated $U$ at $k=0.7$\\
 \midrule
-2 & 0.500 & 0.5 & 0.124734 & 0.125000 & 0.498935 & 1.000 & 0.124724\\
-3 & 0.667 & 0.7 & 0.041496 & 0.041344 & 0.276640 & 1.000 & 0.135247\\
-4 & 0.750 & 0.7 & 0.015145 & 0.015244 & 0.100965 & 1.000 & 0.146632\\
+2 & 0.500 & 0.500 & 0.124734 & 0.125000 & 0.498935 & 0.104968\\
+3 & 0.667 & 0.667 & 0.041813 & 0.041667 & 0.250880 & 0.041496\\
+4 & 0.750 & 0.750 & 0.015471 & 0.015625 & 0.123765 & 0.015145\\
 \bottomrule
 \end{tabular}
 }
 \end{table}
 
-The empirical expected utilities are close to their exact values at the selected grid multipliers. In every tested $n,k$ combination, the winner's bid was strictly above the runner-up, so the measured ``could pay less and still win'' fraction was $1.000$. This follows from continuous rival values and makes the binary fraction uninformative here; the mean winner margin adds context. Figure~\ref{fig:part2} plots payoff, win probability, the fraction with positive margin, and mean margin over the full multiplier grid.
+\paragraph{Expected utility.} For every $n$, the simulated expected utility is highest exactly at the equilibrium multiplier $k=\alpha$, as theory predicts. The simulated values agree with the exact values to within $0.0003$. The nearest $0.1$-grid point, $k=0.7$, gives lower utility in each case. This confirms that deviating from the equilibrium does not help bidder~1.
+
+The plot also shows two clear patterns:
+\begin{itemize}
+  \item \textbf{Bidding too low} ($k<\alpha$) loses too many auctions.
+  \item \textbf{Bidding too high} ($k>\alpha$) wins more often but earns less per win. For $k>1$, bidder~1 bids more than its value, so every win is a loss and the expected utility becomes negative.
+\end{itemize}
+As $n$ grows, $\alpha$ increases: with more competition, each bidder shades its bid less. The expected utility falls, because the item is harder to win.
+
+\begin{table}[H]
+\centering
+\caption{Part 2: ``could have paid less and still won'' at the equilibrium multiplier $k=\alpha$ (bid increment $0.01$).}
+\label{tab:part2paidless}
+\small
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{cccccc}
+\toprule
+$n$ & Strict fraction & Fraction, any winner & Fraction, bidder~1's wins & Mean winner margin & Mean bidder~1 overpayment when winning\\
+\midrule
+2 & 1.000 & 0.960 & 0.959 & 0.124724 & 0.124561\\
+3 & 1.000 & 0.955 & 0.940 & 0.139171 & 0.111475\\
+4 & 1.000 & 0.951 & 0.923 & 0.140351 & 0.093807\\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+\paragraph{Could the winner have paid less?} Almost always. The strict fraction is $1.000$ for every $n$ and $k$: with continuous random bids, two bids are never exactly equal, so the winner can always lower its bid by some small amount. With the practical $0.01$ increment:
+\begin{itemize}
+  \item across all tested multipliers, the winner could have bid $0.01$ less and still won in $92.7\%$ to $100\%$ of auctions;
+  \item counted over bidder~1's wins only, the fraction ranges from $48.1\%$ (at $n=4$, $k=0.1$, where bidder~1 wins rarely and only by small margins) to $100\%$ (when bidder~1's bid is more than $0.01$ above $\alpha$, the highest bid any rival can make).
+\end{itemize}
+At equilibrium, the winner typically overpays by about $0.09$ to $0.14$, which is a large amount compared with $v=0.5$ (Table~\ref{tab:part2paidless}).
+
+This is the main weakness of the first-price auction. The winner pays its own bid, so it almost always pays more than it needed to. This is why bidders must guess how much to shade their bids, and why truthful bidding is not optimal here. In the second-price auction of Part~1, the winner pays exactly the second-highest bid, which is the least it could have paid while still winning, so the problem does not arise.
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.98\linewidth]{figures/part2_first_price.png}
-  \caption{Part 2: Monte Carlo payoff and win probability, plus the winner's reducible bid margin, for $n=2,3,4$. Dashed payoff curves are exact expectations.}
+  \caption{Part 2 results for $n=2,3,4$. Top left: bidder~1's expected utility (solid: simulation; dashed: exact; dotted vertical lines: $k=\alpha$). Top right: bidder~1's win probability. Bottom left: fraction of auctions in which the winner could have bid $0.01$ less and still won (solid: any winner; dashed: bidder~1's wins). Bottom right: average gap between the winning and second-highest bids.}
   \label{fig:part2}
 \end{figure}
 
-\section{VCG shortest-path procurement}
+\section{Part 3: VCG mechanism for the cheapest path}
 
-The network has eight directed edges, each controlled by a supplier with a private cost. The costs used are shown in Table~\ref{tab:edges}; they reproduce the transportation network referred to in the assignment and VCG discussion in \cite{shoham}.
+\subsection{What the task asked}
+
+A buyer wants to buy a path from node A to node F in a network. Each edge is owned by a separate agent with a private cost for carrying traffic. The tasks were:
+\begin{enumerate}
+  \item implement the VCG mechanism using the network in Figure~7.3 of the textbook (Shoham and Leyton-Brown, \emph{Multiagent Systems}), and reproduce the chosen path ABEF and the payments AB~$=4$, BE~$=2$, EF~$=3$, and $0$ for every other edge;
+  \item pick one edge on the chosen path and one edge off it, try every misreported cost from $0$ to $10$ in steps of $0.5$, and examine the change in utility.
+\end{enumerate}
+
+\subsection{How the VCG mechanism works}
+
+Each edge agent reports a cost. The mechanism then does two things:
+\begin{enumerate}
+  \item \textbf{Choose the path.} It selects the path with the lowest total reported cost.
+  \item \textbf{Pay each edge.} An edge on the chosen path is paid
+  \[
+    \text{payment}_e=\Big(\text{cheapest path cost without edge } e\Big)-\Big(\text{cost of the other edges on the chosen path}\Big).
+  \]
+  An edge not on the chosen path is paid $0$.
+\end{enumerate}
+The payment measures how much the edge saves the buyer compared with the best alternative. An edge agent's utility is its payment minus its true cost if it is selected, and $0$ otherwise.
+
+The key point is that an edge's own reported cost does not appear in its payment. Its report only decides \emph{whether} it is selected, just like a bid in the second-price auction. This is why reporting the true cost is a dominant strategy.
+
+Our implementation lists every path from A to F, sorts them by reported cost, and computes the payments with the formula above. The edges are treated as directed from A towards F. We also checked that treating them as undirected (two-way) gives exactly the same results.
+
+\subsection{Results with truthful costs}
 
 \begin{table}[H]
 \centering
-\caption{Edge costs used in the VCG procurement network.}
+\caption{Edge costs from Figure~7.3.}
 \label{tab:edges}
 \begin{tabular}{cccc}
 \toprule
@@ -206,15 +430,20 @@ DF & 2 & EF & 1\\
 \end{tabular}
 \end{table}
 
-The candidate path costs are $c(ABEF)=5$, $c(ACEF)=6$, $c(ABDF)=7$, and $c(ACF)=7$. The efficient path is therefore ABEF. A selected supplier's VCG payment equals the cheapest path cost excluding its edge minus the cost of the other selected edges. The resulting outcome is:
+The four possible paths cost $c(\text{ABEF})=5$, $c(\text{ACEF})=6$, $c(\text{ABDF})=7$ and $c(\text{ACF})=7$, so the mechanism chooses ABEF. The payments are:
+\begin{itemize}
+  \item \textbf{AB:} without AB, the cheapest path is ACEF (cost 6). The other chosen edges BE and EF cost $1+1=2$. Payment $=6-2=4$.
+  \item \textbf{BE:} without BE, the cheapest path is ACEF (cost 6). The other chosen edges AB and EF cost $3+1=4$. Payment $=6-4=2$.
+  \item \textbf{EF:} without EF, the cheapest paths are ABDF and ACF (cost 7). The other chosen edges AB and BE cost $3+1=4$. Payment $=7-4=3$.
+\end{itemize}
 
 \begin{table}[H]
 \centering
-\caption{Truthful VCG outcome. Payments are transfers to selected suppliers.}
+\caption{VCG outcome with truthful costs. This reproduces the payments given in the textbook.}
 \label{tab:vcg}
 \begin{tabular}{ccccc}
 \toprule
-Edge & Selected & Payment & True cost & Supplier utility\\
+Edge & Selected & Payment & True cost & Utility (payment $-$ cost)\\
 \midrule
 AB & Yes & 4 & 3 & 1\\
 BE & Yes & 2 & 1 & 1\\
@@ -224,24 +453,57 @@ AC, BD, CE, CF, DF & No & 0 & -- & 0\\
 \end{tabular}
 \end{table}
 
-For example, excluding AB makes ACEF the cheapest remaining path at cost 6. The other selected edges BE and EF cost 2, so AB receives $6-2=4$. Similarly, BE is paid $6-(3+1)=2$, and EF is paid $7-(3+1)=3$. The mechanism pays 9 in total for a path whose true cost is 5.
+The chosen path and all payments match the textbook. The buyer pays $9$ in total for a path whose true cost is $5$. The extra $4$ is the price of making every agent want to tell the truth.
 
-The misreport sweep uses BE (on the selected path, true cost 1) and AC (off the selected path, true cost 2), with reports from 0 to 10 in increments of 0.5. BE's utility is 1 for reports through 2; above 2 it is excluded from the selected route and its utility becomes zero. AC's truthful utility is zero. Reports below 1 cause ACEF to be selected, but AC then receives payment 1, less than its true cost 2, so its utility is -1; reports from 1 upward give utility zero. Neither agent benefits from misreporting. The results illustrate the dominant-strategy truthfulness of the VCG pivot rule in this instance.
+\subsection{Misreporting experiment}
+
+We chose \textbf{BE} as the edge on the chosen path (true cost 1) and \textbf{AC} as the edge off it (true cost 2). For each, we changed only that edge's reported cost to every value $0,0.5,1,\ldots,10$ (21 reports per edge, 42 in total), kept all other costs truthful, and reran the mechanism. The change in utility is the utility under the misreport minus the utility under truthful reporting.
+
+\begin{table}[H]
+\centering
+\caption{Part 3: summary of the 42 misreports. Each edge's true cost (BE $=1$, AC $=2$) falls in the row where the change in utility is $0$.}
+\label{tab:part3sweep}
+\small
+\begin{tabular}{cccccc}
+\toprule
+Edge & Reported cost & Chosen path & Payment & Utility & Change in utility\\
+\midrule
+BE (true cost 1) & 0 to 2 & ABEF & 2 & 1 & 0\\
+                 & 2.5 to 10 & ACEF & 0 & 0 & $-1$\\
+\midrule
+AC (true cost 2) & 0 to 0.5 & ACEF & 1 & $-1$ & $-1$\\
+                 & 1 to 10 & ABEF & 0 & 0 & 0\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{BE (on the path).} As long as BE reports at most 2, ABEF is still the cheapest path and BE is paid 2, \emph{whatever it reports}. Its utility stays at $2-1=1$, so lying neither helps nor hurts. If BE reports more than 2, ABEF becomes more expensive than ACEF (cost 6), BE is dropped, and its utility falls to 0. Exaggerating its cost can only lose BE its profit. (At a report of exactly 2, the two paths tie at cost 6 and ABEF is kept by the tie rule.)
+
+\paragraph{AC (off the path).} With its true cost, AC is not selected and its utility is 0. If AC reports less than 1, path ACEF looks cheaper than ABEF and AC is selected. However, its payment is only $5-(3+1)=1$, which is less than its true cost of 2, so its utility becomes $1-2=-1$. Under-reporting wins AC the job but at a loss. Reporting 1 or more leaves AC unselected with utility 0.
+
+In all 42 cases, the change in utility is either $0$ or $-1$, and \emph{never positive}. Neither agent can gain by misreporting its cost. This confirms that VCG is truthful in this example: reporting the true cost is a dominant strategy.
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.98\linewidth]{figures/part3_vcg_misreports.png}
-  \caption{Part 3: utility against reported cost for one selected edge (BE) and one unselected edge (AC).}
+  \caption{Part 3: edge utility against reported cost for the on-path edge BE (left) and the off-path edge AC (right). The dashed line marks the true cost; the dotted line marks the utility from truthful reporting. No report gives utility above the dotted line.}
   \label{fig:part3}
 \end{figure}
 
+
 \section{Conclusion}
 
-Across the tested second-price cases, truthful bidding attains the highest estimated utility, including with two rivals. The half-value rival creates flat regions of equally good bids when bidder 1's value is at least 0.5, but truthful bidding remains among them. In the first-price experiment, the empirical payoff peaks on the required grid at the multiplier closest to the symmetric equilibrium multiplier; the Monte Carlo utilities track their analytical values. Finally, the VCG mechanism selects ABEF and reproduces the requested transfers. The two misreport sweeps show no gain over truthful reporting.
+\begin{itemize}
+  \item \textbf{Second-price auction:} bidding the true value gives the highest expected utility against every rival strategy, against every fixed rival bid, and with one or two rivals. Bidder~1 does not need to know what the rivals do, so truthful bidding is a dominant strategy.
+  \item \textbf{First-price auction:} truthful bidding is not optimal. The best bid is the shaded equilibrium bid $\frac{n-1}{n}v$, and the simulation finds the peak exactly there for $n=2,3,4$. Because the winner pays its own bid, it could have paid less and still won in over $92\%$ of auctions at equilibrium.
+  \item \textbf{VCG mechanism:} the implementation chooses path ABEF and pays AB, BE and EF exactly 4, 2 and 3, as in the textbook. No misreport by the on-path edge or the off-path edge increases its utility, so truthful reporting is a dominant strategy.
+\end{itemize}
+
+In Parts~1 and~2, all simulated results agree closely with the exact values derived from theory, and in Part~3 the computed path and payments match the textbook. This confirms that the implementation is correct.
 
 \section*{Reproducibility}
 
-Run the following commands from the project directory with the provided \texttt{as\_env} environment activated. They reproduce the plots and CSVs summarized above.
+Install NumPy and Matplotlib (listed in \texttt{requirements.txt}), then run the following commands from the project folder. They reproduce every table and figure in this report.
 
 \begin{verbatim}
 python part1a_second_price_single_rival.py --trials 100000 --seed 7
@@ -251,14 +513,6 @@ python part2_first_price.py --trials 200000 --value 0.5 --seed 31
 python part3_vcg_shortest_path.py
 \end{verbatim}
 
-The source is split into separate scripts for Parts 1A, 1B, 1C, 2, and 3. The combined interactive demonstration is provided separately as \texttt{demo/index.html}.
-
-\begin{thebibliography}{9}
-\bibitem{assignment4}
-Assignment 4 handout, supplied course PDF.
-
-\bibitem{shoham}
-Y. Shoham and K. Leyton-Brown, \emph{Multiagent Systems: Algorithmic, Game-Theoretic, and Logical Foundations}, Cambridge University Press, 2009. Transportation-network VCG example; the assignment refers to Figure 7.3.
-\end{thebibliography}
+An interactive demonstration of all three mechanisms is provided separately in \texttt{demo/index.html}.
 
 \end{document}

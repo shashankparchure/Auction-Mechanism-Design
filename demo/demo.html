@@ -1,0 +1,1704 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Auction Lab</title>
+<style>
+  :root {
+    color-scheme: light;
+    --plane: #f9f9f7;
+    --surface: #fcfcfb;
+    --raised: #ffffff;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --axis: #c3c2b7;
+    --border: rgba(11, 11, 11, .10);
+    --wash: rgba(11, 11, 11, .04);
+    --s1: #2a78d6;
+    --s2: #eb6834;
+    --s3: #1baf7a;
+    --s1-wash: rgba(42, 120, 214, .12);
+    --s2-wash: rgba(235, 104, 52, .20);
+    --good: #0ca30c;
+    --good-text: #006300;
+    --bad: #d03b3b;
+    --bad-text: #b02c2c;
+    --good-wash: rgba(12, 163, 12, .16);
+    --bad-wash: rgba(208, 59, 59, .16);
+    --shadow: 0 1px 2px rgba(11, 11, 11, .04), 0 8px 24px rgba(11, 11, 11, .05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --plane: #0d0d0d;
+      --surface: #1a1a19;
+      --raised: #222221;
+      --ink: #f0efec;
+      --ink-2: #c3c2b7;
+      --muted: #898781;
+      --grid: #2c2c2a;
+      --axis: #383835;
+      --border: rgba(255, 255, 255, .10);
+      --wash: rgba(255, 255, 255, .05);
+      --s1: #3987e5;
+      --s2: #d95926;
+      --s3: #199e70;
+      --s1-wash: rgba(57, 135, 229, .18);
+      --s2-wash: rgba(217, 89, 38, .26);
+      --good-text: #0ca30c;
+      --bad-text: #e66767;
+      --good-wash: rgba(12, 163, 12, .22);
+      --bad-wash: rgba(208, 59, 59, .24);
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --plane: #0d0d0d;
+    --surface: #1a1a19;
+    --raised: #222221;
+    --ink: #f0efec;
+    --ink-2: #c3c2b7;
+    --muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255, 255, 255, .10);
+    --wash: rgba(255, 255, 255, .05);
+    --s1: #3987e5;
+    --s2: #d95926;
+    --s3: #199e70;
+    --s1-wash: rgba(57, 135, 229, .18);
+    --s2-wash: rgba(217, 89, 38, .26);
+    --good-text: #0ca30c;
+    --bad-text: #e66767;
+    --good-wash: rgba(12, 163, 12, .22);
+    --bad-wash: rgba(208, 59, 59, .24);
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3);
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--plane);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .shell { max-width: 1240px; margin: 0 auto; padding: 28px 24px 56px; }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--s1); outline-offset: 2px; }
+
+  /* Header */
+  .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 18px; }
+  .top h1 { margin: 0; font-size: clamp(28px, 4vw, 40px); letter-spacing: -.03em; line-height: 1.1; }
+  .top p { margin: 6px 0 0; color: var(--ink-2); max-width: 680px; }
+  .theme-btn { flex: none; border: 1px solid var(--border); background: var(--raised); border-radius: 999px; padding: 8px 14px; cursor: pointer; color: var(--ink-2); font-size: 13px; }
+  .theme-btn:hover { color: var(--ink); }
+
+  /* Assignment map */
+  .map { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 16px; }
+  .map-label { color: var(--muted); font-size: 13px; margin-right: 4px; }
+  .map button { border: 1px solid var(--border); background: var(--raised); border-radius: 10px; padding: 6px 12px; cursor: pointer; font-size: 13px; text-align: left; }
+  .map button b { display: block; font-size: 13px; }
+  .map button span { display: block; color: var(--ink-2); font-size: 12px; }
+  .map button[aria-current="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; padding: 4px; background: var(--wash); border: 1px solid var(--border); border-radius: 12px; width: fit-content; max-width: 100%; margin-bottom: 18px; }
+  .tab { border: 0; background: transparent; padding: 9px 16px; border-radius: 9px; cursor: pointer; color: var(--ink-2); font-weight: 600; font-size: 14px; white-space: nowrap; }
+  .tab[aria-selected="true"] { background: var(--raised); color: var(--ink); box-shadow: var(--shadow); }
+  .panel[hidden] { display: none; }
+
+  /* Cards & layout */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); padding: 20px; min-width: 0; }
+  .card h2 { margin: 0; font-size: 17px; letter-spacing: -.01em; }
+  .card h3 { margin: 0; font-size: 15px; }
+  .lede { margin: 4px 0 14px; color: var(--ink-2); font-size: 14px; }
+  .grid-main { display: grid; grid-template-columns: minmax(270px, 340px) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .stack { display: grid; gap: 16px; min-width: 0; }
+  .two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+
+  /* Story / task box */
+  .task { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .task div { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; font-size: 14px; color: var(--ink-2); }
+  .task b { display: block; color: var(--ink); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 2px; }
+
+  /* Controls */
+  .field { margin: 14px 0; }
+  .field-label { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 13px; font-weight: 600; color: var(--ink-2); margin-bottom: 6px; }
+  .field-label output { color: var(--ink); font-variant-numeric: tabular-nums; font-weight: 700; }
+  .seg { display: flex; flex-wrap: wrap; gap: 6px; }
+  .seg button { border: 1px solid var(--border); background: var(--raised); border-radius: 9px; padding: 7px 11px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+  .seg button:hover { color: var(--ink); }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+  input[type="range"] { width: 100%; accent-color: var(--s1); cursor: pointer; }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .btn { border: 1px solid var(--border); background: var(--raised); border-radius: 10px; padding: 8px 13px; cursor: pointer; font-size: 13px; font-weight: 600; }
+  .btn:hover { border-color: var(--ink-2); }
+  .btn.primary { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+
+  /* Stat tiles */
+  .stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+  .stat { background: var(--wash); border-radius: 11px; padding: 10px 12px; min-width: 0; }
+  .stat span { display: block; color: var(--ink-2); font-size: 12px; }
+  .stat strong { display: block; font-size: 20px; letter-spacing: -.02em; overflow-wrap: anywhere; }
+  .stat small { display: block; color: var(--muted); font-size: 11px; }
+
+  /* Verdict */
+  .verdict { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--raised); font-size: 14px; }
+  .verdict .ico { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 800; color: #fff; }
+  .verdict.good .ico { background: var(--good); }
+  .verdict.bad .ico { background: var(--bad); }
+  .verdict.info .ico { background: var(--ink-2); color: var(--surface); }
+  .verdict b { display: block; }
+  .verdict span { color: var(--ink-2); }
+
+  /* Charts */
+  .chart-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--ink-2); margin: 8px 0 2px; }
+  .legend i { display: inline-block; vertical-align: middle; margin-right: 6px; }
+  .k-line { width: 18px; height: 0; border-top: 2px solid; }
+  .k-dash { width: 18px; height: 0; border-top: 2px dashed; }
+  .k-dot { width: 9px; height: 9px; border-radius: 50%; }
+  .k-ring { width: 12px; height: 12px; border-radius: 50%; border: 2.5px solid var(--ink); background: var(--raised); }
+  .chart-host { position: relative; width: 100%; min-width: 0; }
+  .chart-host svg { display: block; width: 100%; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .chart-host svg[data-scrub="1"] { cursor: ew-resize; }
+  .tip { position: absolute; pointer-events: none; z-index: 5; background: var(--raised); border: 1px solid var(--border); box-shadow: 0 6px 20px rgba(0,0,0,.14); border-radius: 10px; padding: 8px 10px; font-size: 12px; min-width: 150px; }
+  .tip .t { color: var(--ink-2); margin-bottom: 4px; }
+  .tip .r { display: flex; align-items: center; gap: 8px; }
+  .tip .r i { width: 14px; height: 0; border-top: 2px solid; flex: none; }
+  .tip .r strong { font-variant-numeric: tabular-nums; }
+  .tip .r span { color: var(--ink-2); }
+
+  .axis-text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .axis-title { fill: var(--ink-2); font-size: 12px; }
+  .ref-text { fill: var(--ink-2); font-size: 11px; font-weight: 600; paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+  .handle-text { fill: var(--ink); font-size: 12px; font-weight: 700; paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+
+  /* Small multiples */
+  .minis { display: grid; grid-template-columns: auto repeat(3, minmax(0, 1fr)); gap: 8px; align-items: stretch; }
+  .minis .colhead, .minis .rowhead { font-size: 12px; color: var(--ink-2); font-weight: 600; display: flex; align-items: center; justify-content: center; text-align: center; }
+  .minis .rowhead { justify-content: flex-start; padding-right: 4px; white-space: nowrap; }
+  .mini { border: 1px solid var(--border); background: var(--raised); border-radius: 11px; padding: 6px 8px 7px; cursor: pointer; text-align: left; min-width: 0; }
+  .mini:hover { border-color: var(--ink-2); }
+  .mini[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+  .mini svg { display: block; width: 100%; height: 58px; }
+  .mini .cap { display: flex; justify-content: space-between; gap: 6px; font-size: 11px; color: var(--ink-2); }
+  .mini .ok { color: var(--good-text); font-weight: 700; white-space: nowrap; }
+
+  /* Arena */
+  .arena-svg { display: block; width: 100%; }
+  .story { margin-top: 10px; padding: 12px 14px; border-radius: 12px; background: var(--wash); font-size: 14px; min-height: 66px; }
+  .story ol { margin: 0; padding-left: 20px; }
+  .story li { margin: 2px 0; }
+  .pill { display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px; border-radius: 999px; font-weight: 700; font-size: 12px; }
+  .pill.win { background: var(--good-wash); color: var(--good-text); }
+  .pill.lose { background: var(--bad-wash); color: var(--bad-text); }
+  .counters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+
+  /* Explanations */
+  .explain { font-size: 14px; color: var(--ink-2); }
+  .explain p { margin: 8px 0; }
+  .explain b { color: var(--ink); }
+  .formula { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; background: var(--wash); border-radius: 8px; padding: 8px 10px; color: var(--ink); overflow-x: auto; }
+
+  /* Data tables */
+  details { margin-top: 10px; font-size: 13px; }
+  summary { cursor: pointer; color: var(--ink-2); font-weight: 600; }
+  .table-wrap { max-height: 280px; overflow: auto; margin-top: 8px; border: 1px solid var(--border); border-radius: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  th, td { padding: 6px 10px; text-align: right; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  th { position: sticky; top: 0; background: var(--raised); color: var(--ink-2); font-weight: 600; }
+  tr.hl td { background: var(--s1-wash); font-weight: 700; }
+
+  /* VCG */
+  .net-svg { display: block; width: 100%; min-width: 540px; height: auto; }
+  #p3-net { overflow-x: auto; }
+  .edge-hit { stroke: transparent; stroke-width: 26; fill: none; cursor: pointer; }
+  .edge-g:focus { outline: none; }
+  .edge-g:focus-visible .edge-focus { stroke: var(--s1); stroke-opacity: .5; }
+  @keyframes flow { to { stroke-dashoffset: -24; } }
+  .flow { animation: flow 1s linear infinite; }
+  @media (prefers-reduced-motion: reduce) { .flow { animation: none; } }
+  .receipt { font-size: 14px; }
+  .receipt .line { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px dashed var(--grid); }
+  .receipt .line span { color: var(--ink-2); }
+  .receipt .line b { font-variant-numeric: tabular-nums; text-align: right; }
+  .receipt .total { border-bottom: 0; border-top: 2px solid var(--ink); margin-top: 4px; padding-top: 9px; }
+  .edge-chips { display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; align-items: center; font-size: 12px; color: var(--ink-2); }
+
+  footer { margin-top: 26px; color: var(--muted); font-size: 12px; text-align: center; }
+
+  @media (max-width: 960px) {
+    .grid-main, .two { grid-template-columns: minmax(0, 1fr); }
+    .task { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (max-width: 560px) {
+    .shell { padding: 18px 16px 40px; }
+    .top { flex-direction: column; }
+    .tabs { width: 100%; }
+    .tab { flex: 1; padding: 9px 6px; font-size: 13px; }
+    .card { padding: 16px; }
+    .counters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .minis .rowhead { font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+<main class="shell">
+  <header class="top">
+    <div>
+      <h1>Auction Lab</h1>
+      <p>An interactive companion to Assignment 4. Drag the bids, run auctions one at a time or a hundred thousand at once, and watch why some auction rules reward honesty and others don't.</p>
+    </div>
+    <button class="theme-btn" id="theme-btn" type="button" aria-label="Toggle dark mode">◐ Theme</button>
+  </header>
+
+  <nav class="map" aria-label="Jump to an assignment part">
+    <span class="map-label">Jump to:</span>
+    <button type="button" data-jump="1A"><b>Part 1A</b><span>9 plots, one rival</span></button>
+    <button type="button" data-jump="1B"><b>Part 1B</b><span>Fixed rival bid</span></button>
+    <button type="button" data-jump="1C"><b>Part 1C</b><span>Two rivals</span></button>
+    <button type="button" data-jump="2"><b>Part 2</b><span>First price, n = 2, 3, 4</span></button>
+    <button type="button" data-jump="3"><b>Part 3</b><span>VCG cheapest path</span></button>
+  </nav>
+
+  <div class="tabs" role="tablist" aria-label="Mechanisms">
+    <button class="tab" role="tab" id="tab-1" aria-controls="panel-1" aria-selected="true">1 · Second price</button>
+    <button class="tab" role="tab" id="tab-2" aria-controls="panel-2" aria-selected="false" tabindex="-1">2 · First price</button>
+    <button class="tab" role="tab" id="tab-3" aria-controls="panel-3" aria-selected="false" tabindex="-1">3 · VCG path</button>
+  </div>
+
+  <!-- ===================== PART 1 ===================== -->
+  <section class="panel" id="panel-1" role="tabpanel" aria-labelledby="tab-1">
+    <div class="task">
+      <div><b>The rule</b>Highest bid wins. The winner pays the <em>second-highest</em> bid, not its own.</div>
+      <div><b>The question</b>Bidder 1 values the item at <em>v</em>. Which bid gives it the most profit on average?</div>
+      <div><b>What to try</b>Drag the dot on the chart. Can you find any bid that beats bidding exactly <em>v</em>?</div>
+    </div>
+
+    <div class="grid-main">
+      <aside class="card">
+        <h2>Set up the auction</h2>
+        <p class="lede">Every choice here matches the assignment.</p>
+
+        <div class="field">
+          <div class="field-label">Bidder 1's true value <em>v</em></div>
+          <div class="seg" id="p1-v" role="group" aria-label="Bidder 1 value">
+            <button type="button" data-val="0.2">0.2</button>
+            <button type="button" data-val="0.5">0.5</button>
+            <button type="button" data-val="0.8">0.8</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="field-label">Number of rival bidders</div>
+          <div class="seg" id="p1-rivals" role="group" aria-label="Number of rivals">
+            <button type="button" data-val="1">1 rival (1A, 1B)</button>
+            <button type="button" data-val="2">2 rivals (1C)</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="field-label">How the rivals bid</div>
+          <div class="seg" id="p1-mode" role="group" aria-label="Rival model">
+            <button type="button" data-val="random">Random rivals (1A)</button>
+            <button type="button" data-val="fixed">Fixed bid (1B)</button>
+          </div>
+        </div>
+
+        <div class="field" id="p1-strategy-field">
+          <div class="field-label">Rival strategy (value ~ U[0,1])</div>
+          <div class="seg" id="p1-strategy" role="group" aria-label="Rival strategy">
+            <button type="button" data-val="truthful">Truthful</button>
+            <button type="button" data-val="half-value">Half of value</button>
+            <button type="button" data-val="random-bid">Random bid</button>
+          </div>
+          <div class="hint" id="p1-strategy-hint"></div>
+        </div>
+
+        <div class="field" id="p1-fixed-field" hidden>
+          <div class="field-label">Each rival's fixed bid <em>r</em></div>
+          <div class="seg" id="p1-fixed" role="group" aria-label="Fixed rival bid">
+            <button type="button" data-val="0.1">0.1</button>
+            <button type="button" data-val="0.4">0.4</button>
+            <button type="button" data-val="0.9">0.9</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="field-label"><label for="p1-bid">Bidder 1's bid <em>b</em></label><output id="p1-bid-out">0.50</output></div>
+          <input id="p1-bid" type="range" min="0" max="1" step="0.01" value="0.5">
+          <div class="btn-row" style="margin-top:8px">
+            <button class="btn" type="button" id="p1-truth">Bid truthfully (b = v)</button>
+          </div>
+        </div>
+
+        <div class="stats">
+          <div class="stat"><span>Your expected profit</span><strong id="p1-u">—</strong><small id="p1-u-sim"></small></div>
+          <div class="stat"><span>Truthful (b = v) profit</span><strong id="p1-ut">—</strong><small>exact</small></div>
+        </div>
+        <div class="verdict" id="p1-verdict"></div>
+      </aside>
+
+      <div class="stack">
+        <article class="card">
+          <div class="chart-head">
+            <div>
+              <h2 id="p1-chart-title">Average profit for every bid from 0.00 to 1.00</h2>
+              <p class="lede" id="p1-chart-sub">Drag on the chart to move your bid. Hover to read values.</p>
+            </div>
+          </div>
+          <div id="p1-chart"></div>
+          <div class="legend" id="p1-legend"></div>
+          <details>
+            <summary>Show the numbers as a table</summary>
+            <div class="table-wrap"><table id="p1-table"></table></div>
+          </details>
+        </article>
+
+        <article class="card">
+          <div class="chart-head">
+            <div>
+              <h2>Watch it happen: one auction at a time</h2>
+              <p class="lede">Each run draws new rival values, applies their strategy, and settles the auction with your current bid.</p>
+            </div>
+            <div class="btn-row">
+              <button class="btn primary" type="button" id="p1-run1">Run 1 auction</button>
+              <button class="btn" type="button" id="p1-run1k">Run 1,000</button>
+              <button class="btn" type="button" id="p1-reset">Reset</button>
+            </div>
+          </div>
+          <div id="p1-arena"></div>
+          <div class="story" id="p1-story" aria-live="polite"></div>
+          <div class="counters">
+            <div class="stat"><span>Auctions run</span><strong id="p1-c-n">0</strong></div>
+            <div class="stat"><span>Win rate</span><strong id="p1-c-w">—</strong></div>
+            <div class="stat"><span>Average profit so far</span><strong id="p1-c-u">—</strong></div>
+            <div class="stat"><span>Theory says</span><strong id="p1-c-e">—</strong></div>
+          </div>
+        </article>
+      </div>
+    </div>
+
+    <div class="two" style="margin-top:16px">
+      <article class="card">
+        <h2 id="p1-minis-title">All 9 cases at a glance</h2>
+        <p class="lede" id="p1-minis-sub">Click a case to load it above. The dashed line is b = v; the dot is the best bid.</p>
+        <div class="minis" id="p1-minis"></div>
+      </article>
+      <article class="card explain">
+        <h2>Do these plots help bidder 1 choose?</h2>
+        <p><b>Yes.</b> In every one of the nine cases the curve peaks at <b>b = v</b>. And because the peak is in the same place whatever the rival does, bidder 1 does not even need to know the rival's strategy: bidding the true value is always a best choice. That is a <b>dominant strategy</b>.</p>
+        <p><b>Why?</b> Your bid only decides <em>whether</em> you win. The price is set by the rival. Bidding <em>v</em> means you win exactly when the price is below your value (profit) and lose exactly when it is above (avoiding a loss).</p>
+        <p><b>Flat regions.</b> A half-value rival never bids above 0.5. So when v ≥ 0.5, every bid from 0.5 upward wins every auction and earns the same. Truthful bidding ties for best there (weakly dominant).</p>
+        <p><b>Two rivals (1C).</b> You must beat the higher of two bids, so you win less often and earn less, but the peak is still at b = v.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- ===================== PART 2 ===================== -->
+  <section class="panel" id="panel-2" role="tabpanel" aria-labelledby="tab-2" hidden>
+    <div class="task">
+      <div><b>The rule</b>Highest bid wins and the winner pays <em>its own bid</em>. Bidding your full value means zero profit.</div>
+      <div><b>The setup</b>The other n − 1 bidders draw values from U[0,1] and bid the equilibrium <em>(n−1)/n × value</em>. Bidder 1 bids <em>k × v</em>.</div>
+      <div><b>What to try</b>Drag k. Where is the profit highest? Then watch how often the winner overpaid.</div>
+    </div>
+
+    <div class="grid-main">
+      <aside class="card">
+        <h2>Set up the auction</h2>
+        <p class="lede">Simulated with 200,000 auctions for each n, as in the report.</p>
+
+        <div class="field">
+          <div class="field-label">Number of bidders n</div>
+          <div class="seg" id="p2-n" role="group" aria-label="Number of bidders">
+            <button type="button" data-val="2">n = 2</button>
+            <button type="button" data-val="3">n = 3</button>
+            <button type="button" data-val="4">n = 4</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="field-label"><label for="p2-k">Bid multiplier k (bid = k·v)</label><output id="p2-k-out">0.70</output></div>
+          <input id="p2-k" type="range" min="0.1" max="2" step="0.01" value="0.7">
+          <div class="btn-row" style="margin-top:8px">
+            <button class="btn" type="button" id="p2-eq">Snap to equilibrium k = (n−1)/n</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="field-label"><label for="p2-v">Bidder 1's value v</label><output id="p2-v-out">0.50</output></div>
+          <input id="p2-v" type="range" min="0.05" max="1" step="0.05" value="0.5">
+          <div class="hint">The report uses v = 0.5. The best k is the same for every v.</div>
+        </div>
+
+        <div class="field">
+          <div class="field-label">Smallest bid step for "could have paid less"</div>
+          <div class="seg" id="p2-inc" role="group" aria-label="Bid increment">
+            <button type="button" data-val="0.001">0.001</button>
+            <button type="button" data-val="0.01">0.01</button>
+            <button type="button" data-val="0.05">0.05</button>
+          </div>
+        </div>
+
+        <label style="display:flex;gap:8px;align-items:center;font-size:13px;color:var(--ink-2);font-weight:600">
+          <input type="checkbox" id="p2-compare"> Compare n = 2, 3, 4 on one chart
+        </label>
+        <label style="display:flex;gap:8px;align-items:center;font-size:13px;color:var(--ink-2);font-weight:600;margin-top:8px">
+          <input type="checkbox" id="p2-zoom" checked> Zoom in on the peak
+        </label>
+
+        <div class="stats">
+          <div class="stat"><span>Your bid k·v</span><strong id="p2-bid">—</strong></div>
+          <div class="stat"><span>Chance you win</span><strong id="p2-win">—</strong><small id="p2-win-sim"></small></div>
+          <div class="stat"><span>Expected profit</span><strong id="p2-u">—</strong><small id="p2-u-sim"></small></div>
+          <div class="stat"><span>Equilibrium profit</span><strong id="p2-ueq">—</strong><small id="p2-eq-k"></small></div>
+        </div>
+        <div class="verdict" id="p2-verdict"></div>
+      </aside>
+
+      <div class="stack">
+        <article class="card">
+          <h2>Expected profit of bidder 1 for each multiplier k</h2>
+          <p class="lede">Too low and you rarely win; too high and each win earns little (above k = 1 you pay more than the item is worth).</p>
+          <div id="p2-chart"></div>
+          <div class="legend" id="p2-legend"></div>
+          <details>
+            <summary>Show the numbers as a table</summary>
+            <div class="table-wrap"><table id="p2-table"></table></div>
+          </details>
+        </article>
+
+        <div class="two">
+          <article class="card">
+            <h2>Could the winner have paid less?</h2>
+            <p class="lede" id="p2-frac-sub">Share of auctions where the winner could have bid one step less and still won.</p>
+            <div id="p2-frac-chart"></div>
+            <div class="legend" id="p2-frac-legend"></div>
+            <p class="hint" id="p2-strict-note"></p>
+          </article>
+          <article class="card">
+            <div class="chart-head">
+              <h2>Money left on the table</h2>
+              <div class="btn-row">
+                <button class="btn primary" type="button" id="p2-play">▶ Play</button>
+                <button class="btn" type="button" id="p2-step">Next</button>
+              </div>
+            </div>
+            <div id="p2-arena" style="margin-top:8px"></div>
+            <div class="story" id="p2-story" aria-live="polite"></div>
+            <div class="counters" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+              <div class="stat"><span>Winner could pay less</span><strong id="p2-c-any">—</strong><small id="p2-c-n">0 auctions</small></div>
+              <div class="stat"><span>…when you were the winner</span><strong id="p2-c-b1">—</strong><small id="p2-c-b1n">0 wins</small></div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== PART 3 ===================== -->
+  <section class="panel" id="panel-3" role="tabpanel" aria-labelledby="tab-3" hidden>
+    <div class="task">
+      <div><b>The rule</b>Each road (edge) is owned by an agent with a private cost. The buyer picks the cheapest A→F path from the <em>reported</em> costs.</div>
+      <div><b>The payment</b>A chosen edge is paid: cheapest path <em>without</em> it, minus the other chosen edges' cost. Others get 0.</div>
+      <div><b>What to try</b>Click any edge, then change the cost it reports. Can any lie earn more than the truth?</div>
+    </div>
+
+    <div class="grid-main">
+      <aside class="card">
+        <h2>Pick an edge and lie</h2>
+        <p class="lede">Click an edge in the network, or choose one here.</p>
+        <div class="edge-chips">
+          <span>On the path</span>
+          <div class="seg" id="p3-on" role="group" aria-label="Edges on the truthful path"></div>
+          <span>Off the path</span>
+          <div class="seg" id="p3-off" role="group" aria-label="Edges off the truthful path"></div>
+        </div>
+        <div class="field">
+          <div class="field-label"><label for="p3-report">Cost reported by <span id="p3-edge-name">BE</span></label><output id="p3-report-out">1.0</output></div>
+          <input id="p3-report" type="range" min="0" max="10" step="0.5" value="1">
+          <div class="btn-row" style="margin-top:8px">
+            <button class="btn" type="button" id="p3-truth">Tell the truth</button>
+          </div>
+        </div>
+        <div class="receipt" id="p3-receipt"></div>
+        <div class="verdict" id="p3-verdict"></div>
+      </aside>
+
+      <div class="stack">
+        <article class="card">
+          <div class="chart-head">
+            <div>
+              <h2>Transportation network (Figure 7.3)</h2>
+              <p class="lede">Numbers are each edge's true cost. Hover an edge for details.</p>
+            </div>
+            <div class="legend" style="margin:0">
+              <span><i class="k-line" style="border-color:var(--s1);border-width:4px"></i>Chosen path</span>
+              <span><i class="k-dash" style="border-color:var(--s2)"></i>Best path without your edge</span>
+            </div>
+          </div>
+          <div id="p3-net" style="position:relative"></div>
+        </article>
+
+        <div class="two">
+          <article class="card">
+            <h2>Utility of <span class="p3-edge">BE</span> for every report</h2>
+            <p class="lede">Reports 0 to 10 in steps of 0.5 (the assignment sweep). Drag to change the report.</p>
+            <div id="p3-chart"></div>
+            <div class="legend" id="p3-legend"></div>
+            <details>
+              <summary>Show the sweep as a table</summary>
+              <div class="table-wrap"><table id="p3-table"></table></div>
+            </details>
+          </article>
+          <article class="card">
+            <h2>Payments with truthful costs</h2>
+            <p class="lede">The mechanism reproduces the textbook: path ABEF; AB paid 4, BE paid 2, EF paid 3, all others 0.</p>
+            <div class="table-wrap" style="max-height:none"><table id="p3-pay"></table></div>
+            <p class="explain" style="margin-top:12px">The buyer pays <b>9</b> for a path that truly costs <b>5</b>. The extra 4 is the price of honesty: each chosen edge is paid what it saves the buyer, so its own report never changes its payment, only whether it is chosen.</p>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>Self-contained page · all simulation runs in your browser · seeded so the numbers are repeatable.</footer>
+</main>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const SVGNS = "http://www.w3.org/2000/svg";
+const MINUS = "−";
+
+function svgEl(tag, attrs, parent) {
+  const e = document.createElementNS(SVGNS, tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (k === "text") e.textContent = v; else e.setAttribute(k, v);
+  }
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function htmlEl(tag, props, parent) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props || {})) {
+    if (k === "text") e.textContent = v;
+    else if (k === "class") e.className = v;
+    else if (k === "style") e.setAttribute("style", v);
+    else e.setAttribute(k, v);
+  }
+  if (parent) parent.appendChild(e);
+  return e;
+}
+const fmt = (x, d = 3) => Number.isFinite(x) ? (Math.abs(x) < 0.5 * 10 ** -d ? (0).toFixed(d) : x.toFixed(d)).replace("-", MINUS) : "—";
+const signed = (x, d = 3) => {
+  if (!Number.isFinite(x)) return "—";
+  if (Math.abs(x) < 0.5 * 10 ** -d) return "±" + (0).toFixed(d);
+  return (x > 0 ? "+" : MINUS) + Math.abs(x).toFixed(d);
+};
+const pct = (x, d = 1) => Number.isFinite(x) ? (100 * x).toFixed(d) + "%" : "—";
+const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
+const round2 = (x) => Math.round(x * 100) / 100;
+
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function hashSeed(text) {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+function niceTicks(min, max, count) {
+  const span = max - min || 1;
+  const raw = span / count;
+  const mag = 10 ** Math.floor(Math.log10(raw));
+  const r = raw / mag;
+  const step = (r >= 7.5 ? 10 : r >= 3.5 ? 5 : r >= 1.5 ? 2 : 1) * mag;
+  const out = [];
+  for (let t = Math.ceil(min / step - 1e-9) * step; t <= max + step * 1e-9; t += step) out.push(+t.toFixed(10));
+  return out;
+}
+function decimalsFor(ticks) {
+  const step = ticks.length > 1 ? Math.abs(ticks[1] - ticks[0]) : 1;
+  return Math.max(0, Math.min(4, -Math.floor(Math.log10(step) + 1e-9)));
+}
+
+/* ------------------------------------------------------------------
+   Reusable line chart: exact curves, simulated dots, reference lines,
+   a draggable handle, and a crosshair tooltip.
+------------------------------------------------------------------- */
+class Chart {
+  constructor(host, height) {
+    this.host = host;
+    this.height = height;
+    host.classList.add("chart-host");
+    this.svg = svgEl("svg", { role: "img" }, host);
+    this.tip = htmlEl("div", { class: "tip" }, host);
+    this.tip.hidden = true;
+    this.dragging = false;
+    const xFromEvent = (ev) => {
+      const r = this.svg.getBoundingClientRect();
+      return this.invX(ev.clientX - r.left);
+    };
+    this.svg.addEventListener("pointerdown", (ev) => {
+      if (!this.cfg || !this.cfg.onScrub) return;
+      this.dragging = true;
+      this.svg.setPointerCapture(ev.pointerId);
+      this.cfg.onScrub(this.snap(xFromEvent(ev)));
+      this.hover(this.snap(xFromEvent(ev)));
+    });
+    this.svg.addEventListener("pointermove", (ev) => {
+      if (!this.cfg) return;
+      const x = this.snap(xFromEvent(ev));
+      if (this.dragging && this.cfg.onScrub) this.cfg.onScrub(x);
+      this.hover(x);
+    });
+    const stop = () => { this.dragging = false; };
+    this.svg.addEventListener("pointerup", stop);
+    this.svg.addEventListener("pointercancel", stop);
+    this.svg.addEventListener("pointerleave", () => { if (!this.dragging) this.hideHover(); });
+    this.svg.addEventListener("keydown", (ev) => {
+      if (!this.cfg || !this.cfg.onKey) return;
+      if (ev.key === "ArrowRight" || ev.key === "ArrowUp") { ev.preventDefault(); this.cfg.onKey(1); }
+      if (ev.key === "ArrowLeft" || ev.key === "ArrowDown") { ev.preventDefault(); this.cfg.onKey(-1); }
+    });
+    this.svg.addEventListener("focus", () => { if (this.cfg && this.cfg.handle) this.hover(this.cfg.handle.x); });
+    this.svg.addEventListener("blur", () => this.hideHover());
+    let lastW = 0;
+    new ResizeObserver(() => {
+      const w = this.host.clientWidth;
+      if (this.cfg && Math.abs(w - lastW) > 1) { lastW = w; this.render(this.cfg); }
+    }).observe(host);
+  }
+  snap(x) {
+    const c = this.cfg;
+    x = clamp(x, c.x.min, c.x.max);
+    return c.snap ? c.snap(x) : x;
+  }
+  render(cfg) {
+    this.cfg = cfg;
+    const W = Math.max(260, this.host.clientWidth || 600);
+    const H = cfg.height || this.height;
+    const m = { l: 50, r: 14, t: 22, b: 42 };
+    this.m = m; this.W = W; this.H = H;
+    const svg = this.svg;
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.setAttribute("height", H);
+    svg.setAttribute("aria-label", cfg.label || "Chart");
+    svg.setAttribute("tabindex", cfg.onKey ? "0" : "-1");
+    svg.dataset.scrub = cfg.onScrub ? "1" : "0";
+    while (svg.firstChild) svg.firstChild.remove();
+
+    const ys = [];
+    for (const s of cfg.series) for (const p of s.points) if (Number.isFinite(p.y)) ys.push(p.y);
+    for (const l of cfg.hlines || []) ys.push(l.y);
+    if (cfg.handle && Number.isFinite(cfg.handle.y)) ys.push(cfg.handle.y);
+    const keepZero = !(cfg.y && cfg.y.zero === false);
+    let ymin = cfg.y && cfg.y.min != null ? cfg.y.min : Math.min(...ys, keepZero ? 0 : Infinity);
+    let ymax = cfg.y && cfg.y.max != null ? cfg.y.max : Math.max(...ys, keepZero ? 0 : -Infinity);
+    if (!Number.isFinite(ymin) || !Number.isFinite(ymax)) { ymin = 0; ymax = 1; }
+    if (ymax - ymin < 1e-9) { ymax += 0.05; ymin -= keepZero && ymin >= 0 ? 0 : 0.05; }
+    const pad = (ymax - ymin) * 0.1;
+    if (!(cfg.y && cfg.y.max != null)) ymax += pad;
+    if (!(cfg.y && cfg.y.min != null) && (ymin < 0 || !keepZero)) ymin -= pad;
+    const yt = niceTicks(ymin, ymax, H < 220 ? 4 : 5);
+    ymin = Math.min(ymin, yt[0]); ymax = Math.max(ymax, yt[yt.length - 1]);
+    const yd = cfg.y && cfg.y.decimals != null ? cfg.y.decimals : decimalsFor(yt);
+
+    const x0 = cfg.x.min, x1 = cfg.x.max;
+    const sx = (x) => m.l + (x - x0) / (x1 - x0) * (W - m.l - m.r);
+    const sy = (y) => m.t + (ymax - y) / (ymax - ymin) * (H - m.t - m.b);
+    this.sx = sx; this.sy = (y) => sy(clamp(y, ymin, ymax));
+    this.invX = (px) => x0 + (px - m.l) / (W - m.l - m.r) * (x1 - x0);
+
+    const defs = svgEl("defs", {}, svg);
+    const clipId = "clip" + Math.random().toString(36).slice(2, 8);
+    const cp = svgEl("clipPath", { id: clipId }, defs);
+    svgEl("rect", { x: m.l, y: m.t - 6, width: W - m.l - m.r, height: H - m.t - m.b + 12 }, cp);
+
+    // grid + axes
+    const g = svgEl("g", {}, svg);
+    for (const t of yt) {
+      svgEl("line", { x1: m.l, x2: W - m.r, y1: sy(t), y2: sy(t), style: `stroke:var(${Math.abs(t) < 1e-12 ? "--axis" : "--grid"});stroke-width:1` }, g);
+      svgEl("text", { x: m.l - 8, y: sy(t) + 4, "text-anchor": "end", class: "axis-text", text: fmt(t, yd) }, g);
+    }
+    const xt = cfg.x.ticks || niceTicks(x0, x1, 5);
+    const xd = cfg.x.decimals != null ? cfg.x.decimals : decimalsFor(xt);
+    for (const t of xt) {
+      svgEl("line", { x1: sx(t), x2: sx(t), y1: H - m.b, y2: H - m.b + 4, style: "stroke:var(--axis)" }, g);
+      svgEl("text", { x: sx(t), y: H - m.b + 17, "text-anchor": "middle", class: "axis-text", text: fmt(t, xd) }, g);
+    }
+    svgEl("text", { x: (m.l + W - m.r) / 2, y: H - 6, "text-anchor": "middle", class: "axis-title", text: cfg.x.label }, g);
+    svgEl("text", { x: 12, y: (m.t + H - m.b) / 2, "text-anchor": "middle", class: "axis-title", transform: `rotate(-90 12 ${(m.t + H - m.b) / 2})`, text: cfg.y.label }, g);
+
+    // reference lines
+    const refs = svgEl("g", {}, svg);
+    const labelSlots = [];
+    for (const l of cfg.vlines || []) {
+      if (l.x < x0 || l.x > x1) continue;
+      svgEl("line", { x1: sx(l.x), x2: sx(l.x), y1: m.t, y2: H - m.b, style: `stroke:var(${l.color || "--ink-2"});stroke-width:1.5;stroke-dasharray:${l.dash || "5 4"}` }, refs);
+      if (l.label) {
+        let y = m.t - 7;
+        const px = sx(l.x);
+        if (labelSlots.some((s) => Math.abs(s - px) < 70)) y = m.t + 8;
+        labelSlots.push(px);
+        const anchor = px > W - 80 ? "end" : px < m.l + 40 ? "start" : "middle";
+        svgEl("text", { x: px + (anchor === "end" ? -3 : anchor === "start" ? 3 : 0), y, "text-anchor": anchor, class: "ref-text", text: l.label }, refs);
+      }
+    }
+    for (const l of cfg.hlines || []) {
+      svgEl("line", { x1: m.l, x2: W - m.r, y1: sy(l.y), y2: sy(l.y), style: `stroke:var(${l.color || "--ink-2"});stroke-width:1.5;stroke-dasharray:${l.dash || "5 4"}` }, refs);
+      if (l.label) svgEl("text", { x: W - m.r - 4, y: sy(l.y) - 6, "text-anchor": "end", class: "ref-text", text: l.label }, refs);
+    }
+
+    // series
+    const data = svgEl("g", { "clip-path": `url(#${clipId})` }, svg);
+    for (const s of cfg.series) {
+      const pts = s.points.filter((p) => Number.isFinite(p.y));
+      if (s.line !== false && pts.length > 1) {
+        const d = pts.map((p, i) => (i ? "L" : "M") + sx(p.x).toFixed(1) + "," + sy(p.y).toFixed(1)).join("");
+        svgEl("path", { d, style: `fill:none;stroke:var(${s.color});stroke-width:${s.width || 2};stroke-linejoin:round;stroke-linecap:round;${s.dash ? "stroke-dasharray:" + s.dash : ""};opacity:${s.opacity || 1}` }, data);
+      }
+      if (s.dots) {
+        for (const p of pts) svgEl("circle", { cx: sx(p.x), cy: sy(p.y), r: s.r || 3.5, style: `fill:var(${s.color});stroke:var(--surface);stroke-width:1.5` }, data);
+      }
+    }
+
+    // handle
+    if (cfg.handle && Number.isFinite(cfg.handle.y)) {
+      const hx = sx(cfg.handle.x), hy = sy(clamp(cfg.handle.y, ymin, ymax));
+      const hg = svgEl("g", {}, svg);
+      svgEl("line", { x1: hx, x2: hx, y1: hy, y2: H - m.b, style: "stroke:var(--ink);stroke-width:1;stroke-dasharray:2 3;opacity:.6" }, hg);
+      svgEl("circle", { cx: hx, cy: hy, r: 8, style: "fill:var(--raised);stroke:var(--ink);stroke-width:2.5" }, hg);
+      if (cfg.handle.label) {
+        const anchor = hx > W - 90 ? "end" : hx < m.l + 60 ? "start" : "middle";
+        const ty = hy - 14 < m.t + 4 ? hy + 24 : hy - 14;
+        svgEl("text", { x: hx, y: ty, "text-anchor": anchor, class: "handle-text", text: cfg.handle.label }, hg);
+      }
+    }
+    this.overlay = svgEl("g", { "pointer-events": "none" }, svg);
+  }
+  hover(x) {
+    const c = this.cfg;
+    if (!c || !c.tooltip) return;
+    const info = c.tooltip(x);
+    if (!info) return this.hideHover();
+    while (this.overlay.firstChild) this.overlay.firstChild.remove();
+    const px = this.sx(x);
+    svgEl("line", { x1: px, x2: px, y1: this.m.t, y2: this.H - this.m.b, style: "stroke:var(--ink-2);stroke-width:1;opacity:.5" }, this.overlay);
+    for (const r of info.rows) {
+      if (r.y != null && Number.isFinite(r.y)) svgEl("circle", { cx: px, cy: this.sy(r.y), r: 4.5, style: `fill:var(${r.color || "--ink"});stroke:var(--surface);stroke-width:2` }, this.overlay);
+    }
+    const tip = this.tip;
+    tip.replaceChildren();
+    htmlEl("div", { class: "t", text: info.title }, tip);
+    for (const r of info.rows) {
+      const row = htmlEl("div", { class: "r" }, tip);
+      htmlEl("i", { style: `border-top-color:var(${r.color || "--ink-2"});${r.dash ? "border-top-style:dashed" : ""}` }, row);
+      htmlEl("strong", { text: r.value }, row);
+      htmlEl("span", { text: r.label }, row);
+    }
+    tip.hidden = false;
+    const tw = tip.offsetWidth;
+    const left = px + 14 + tw > this.W ? px - 14 - tw : px + 14;
+    tip.style.left = Math.max(0, left) + "px";
+    tip.style.top = this.m.t + "px";
+  }
+  hideHover() {
+    this.tip.hidden = true;
+    if (this.overlay) while (this.overlay.firstChild) this.overlay.firstChild.remove();
+  }
+}
+
+function setPressed(groupId, value) {
+  for (const b of $(groupId).querySelectorAll("button")) b.setAttribute("aria-pressed", String(b.dataset.val === String(value)));
+}
+function onGroup(groupId, handler) {
+  $(groupId).addEventListener("click", (ev) => {
+    const b = ev.target.closest("button[data-val]");
+    if (b) handler(b.dataset.val);
+  });
+}
+function legend(hostId, items) {
+  const host = $(hostId);
+  host.replaceChildren();
+  for (const it of items) {
+    const s = htmlEl("span", {}, host);
+    const cls = it.kind === "dot" ? "k-dot" : it.kind === "dash" ? "k-dash" : it.kind === "ring" ? "k-ring" : "k-line";
+    const style = it.kind === "dot" ? `background:var(${it.color})` : it.kind === "ring" ? "" : `border-color:var(${it.color})`;
+    htmlEl("i", { class: cls, style }, s);
+    s.appendChild(document.createTextNode(it.label));
+  }
+}
+function fillTable(tableId, headers, rows, highlight) {
+  const t = $(tableId);
+  t.replaceChildren();
+  const tr = htmlEl("tr", {}, htmlEl("thead", {}, t));
+  for (const h of headers) htmlEl("th", { text: h }, tr);
+  const body = htmlEl("tbody", {}, t);
+  rows.forEach((r, i) => {
+    const row = htmlEl("tr", highlight && highlight(i) ? { class: "hl" } : {}, body);
+    for (const c of r) htmlEl("td", { text: c }, row);
+  });
+}
+function verdict(id, kind, title, text) {
+  const v = $(id);
+  v.className = "verdict " + kind;
+  v.replaceChildren();
+  htmlEl("span", { class: "ico", text: kind === "good" ? "✓" : kind === "bad" ? "!" : "i", "aria-hidden": "true" }, v);
+  const body = htmlEl("div", {}, v);
+  htmlEl("b", { text: title }, body);
+  htmlEl("span", { text }, body);
+}
+
+/* ==================================================================
+   PART 1 — second-price auction
+================================================================== */
+const P1 = { v: 0.5, rivals: 1, mode: "random", strategy: "truthful", fixed: 0.4, bid: 0.5 };
+const BIDS = Array.from({ length: 101 }, (_, i) => i / 100);
+const P1_TRIALS = 100000;
+const STRAT_LABEL = { "truthful": "Truthful", "half-value": "Half of value", "random-bid": "Random bid" };
+const STRAT_HINT = {
+  "truthful": "Each rival bids exactly its value.",
+  "half-value": "Each rival bids half its value, so never more than 0.5.",
+  "random-bid": "Each rival ignores its value and bids a fresh random number.",
+};
+
+// Exact expected utility against random rivals (derived in the report).
+function exactSP(v, b, count, strategy) {
+  const support = strategy === "half-value" ? 0.5 : 1;
+  const L = Math.min(b, support);
+  if (L <= 0) return 0;
+  const scale = strategy === "half-value" ? 2 ** count : 1;
+  return scale * L ** count * (v - count / (count + 1) * L);
+}
+// Utility against fixed rival bids: ties split equally.
+function fixedSP(v, b, r, count) {
+  if (b > r + 1e-9) return v - r;
+  if (Math.abs(b - r) <= 1e-9) return (v - r) / (count + 1);
+  return 0;
+}
+function p1Value(v, b, s = P1) {
+  return s.mode === "fixed" ? fixedSP(v, b, s.fixed, s.rivals) : exactSP(v, b, s.rivals, s.strategy);
+}
+function rivalBid(strategy, rng) {
+  const value = rng();
+  if (strategy === "truthful") return { value, bid: value };
+  if (strategy === "half-value") return { value, bid: 0.5 * value };
+  return { value, bid: rng() };
+}
+
+// Monte Carlo: 100,000 auctions, reused for all 101 bids (same as the Python code).
+const p1Samples = new Map();
+function p1Sample(rivals, strategy) {
+  const key = rivals + "|" + strategy;
+  if (p1Samples.has(key)) return p1Samples.get(key);
+  const rng = mulberry32(hashSeed("part1|" + key));
+  const Y = new Float64Array(P1_TRIALS);
+  for (let i = 0; i < P1_TRIALS; i++) {
+    let top = -1;
+    for (let j = 0; j < rivals; j++) top = Math.max(top, rivalBid(strategy, rng).bid);
+    Y[i] = top;
+  }
+  Y.sort();
+  const S = new Float64Array(P1_TRIALS + 1);
+  for (let i = 0; i < P1_TRIALS; i++) S[i + 1] = S[i] + Y[i];
+  const out = { Y, S };
+  p1Samples.set(key, out);
+  return out;
+}
+function simSP(v, b, sample) {
+  // number of auctions with highest rival bid <= b (bidder 1 wins those)
+  let lo = 0, hi = sample.Y.length;
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (sample.Y[mid] <= b) lo = mid + 1; else hi = mid; }
+  return (v * lo - sample.S[lo]) / P1_TRIALS;
+}
+
+function caseName(s = P1) {
+  if (s.mode === "fixed") return s.rivals === 2 ? "Part 1C · fixed bids, two rivals" : "Part 1B · fixed rival bid";
+  return s.rivals === 2 ? "Part 1C · two rivals" : "Part 1A · one rival";
+}
+
+const p1Chart = new Chart($("p1-chart"), 330);
+const p1Arena = { n: 0, wins: 0, sum: 0, last: null };
+
+function renderP1() {
+  setPressed("p1-v", P1.v);
+  setPressed("p1-rivals", P1.rivals);
+  setPressed("p1-mode", P1.mode);
+  setPressed("p1-strategy", P1.strategy);
+  setPressed("p1-fixed", P1.fixed);
+  $("p1-strategy-field").hidden = P1.mode === "fixed";
+  $("p1-fixed-field").hidden = P1.mode !== "fixed";
+  $("p1-strategy-hint").textContent = STRAT_HINT[P1.strategy];
+  $("p1-bid").value = P1.bid;
+  $("p1-bid-out").textContent = P1.bid.toFixed(2);
+
+  const v = P1.v;
+  const exact = BIDS.map((b) => ({ x: b, y: p1Value(v, b) }));
+  const sample = P1.mode === "random" ? p1Sample(P1.rivals, P1.strategy) : null;
+  const sim = sample ? BIDS.map((b) => ({ x: b, y: simSP(v, b, sample) })) : null;
+  const uBid = p1Value(v, P1.bid);
+  const uTruth = p1Value(v, v);
+  const best = Math.max(...exact.map((p) => p.y));
+  const bestBids = exact.filter((p) => p.y > best - 1e-9).map((p) => p.x);
+
+  $("p1-chart-title").textContent = caseName() + ": average profit for every bid";
+  $("p1-chart-sub").textContent = P1.mode === "fixed"
+    ? "The rival bid is fixed, so there is no randomness: each point is exact. Drag on the chart to move your bid."
+    : "Line: exact expected profit. Dots: simulated with 100,000 auctions per bid. Drag on the chart to move your bid.";
+
+  const series = [{ color: "--s1", points: exact, width: 2.5 }];
+  if (sim) series.push({ color: "--s2", points: sim.filter((_, i) => i % 2 === 0), line: false, dots: true, r: 3 });
+  const vlines = [{ x: v, label: "truthful b = v", color: "--ink-2" }];
+  if (P1.mode === "fixed") vlines.push({ x: P1.fixed, label: "rival bid r", color: "--muted", dash: "2 3" });
+  p1Chart.render({
+    label: "Expected profit for each bid",
+    x: { min: 0, max: 1, label: "Bidder 1's bid b", ticks: [0, 0.2, 0.4, 0.6, 0.8, 1], decimals: 1 },
+    y: { label: "Average profit" },
+    series, vlines,
+    handle: { x: P1.bid, y: uBid, label: `your bid ${P1.bid.toFixed(2)}` },
+    snap: round2,
+    onScrub: (x) => { if (x !== P1.bid) { P1.bid = x; resetArena1(); renderP1(); } },
+    onKey: (d) => { P1.bid = clamp(round2(P1.bid + d * 0.01), 0, 1); resetArena1(); renderP1(); },
+    tooltip: (x) => {
+      const i = Math.round(x * 100);
+      const rows = [{ color: "--s1", value: fmt(exact[i].y, 4), label: P1.mode === "fixed" ? "profit" : "exact", y: exact[i].y }];
+      if (sim) rows.push({ color: "--s2", value: fmt(sim[i].y, 4), label: "simulated", y: sim[i].y });
+      return { title: `bid b = ${x.toFixed(2)}`, rows };
+    },
+  });
+  legend("p1-legend", sim
+    ? [{ kind: "line", color: "--s1", label: "Exact expected profit" }, { kind: "dot", color: "--s2", label: "Simulated, 100,000 auctions per bid (every 2nd bid shown)" }, { kind: "ring", label: "Your bid (drag it)" }]
+    : [{ kind: "line", color: "--s1", label: "Profit against the fixed bid" }, { kind: "ring", label: "Your bid (drag it)" }]);
+
+  $("p1-u").textContent = fmt(uBid);
+  $("p1-u-sim").textContent = sim ? "simulated: " + fmt(sim[Math.round(P1.bid * 100)].y) : "exact (no randomness)";
+  $("p1-ut").textContent = fmt(uTruth);
+  const bestText = bestBids.length > 1 ? `${bestBids[0].toFixed(2)}–${bestBids[bestBids.length - 1].toFixed(2)}` : bestBids[0].toFixed(2);
+  if (Math.abs(P1.bid - v) < 1e-9) {
+    verdict("p1-verdict", "good", "You are bidding truthfully.", `This is a best bid. Best bid(s) here: ${bestText}.`);
+  } else if (uBid < uTruth - 1e-9) {
+    verdict("p1-verdict", "bad", `Truthful bidding earns ${signed(uTruth - uBid, 4)} more.`,
+      P1.bid < v ? "Bidding below v loses auctions you would have won at a profit." : "Bidding above v only adds wins where the price is above your value, which lose money.");
+  } else {
+    verdict("p1-verdict", "info", "This bid ties with truthful bidding.", `In this case every bid in ${bestText} earns the same, but none beats b = v.`);
+  }
+
+  fillTable("p1-table", sim ? ["Bid b", "Exact profit", "Simulated profit"] : ["Bid b", "Profit"],
+    BIDS.map((b, i) => sim ? [b.toFixed(2), fmt(exact[i].y, 5), fmt(sim[i].y, 5)] : [b.toFixed(2), fmt(exact[i].y, 5)]),
+    (i) => Math.abs(BIDS[i] - v) < 1e-9);
+
+  renderMinis();
+  renderArena1();
+}
+
+function renderMinis() {
+  const host = $("p1-minis");
+  host.replaceChildren();
+  const fixed = P1.mode === "fixed";
+  const cols = fixed ? [0.1, 0.4, 0.9] : ["truthful", "half-value", "random-bid"];
+  $("p1-minis-title").textContent = caseName() + ": all 9 cases";
+  $("p1-minis-sub").textContent = "Rows: bidder 1's value. Columns: " + (fixed ? "the rival's fixed bid." : "the rival strategy.") + " Click a case to load it. Dashed line: b = v. Dot: truthful bid.";
+  htmlEl("div", {}, host);
+  for (const c of cols) htmlEl("div", { class: "colhead", text: fixed ? `r = ${c}` : STRAT_LABEL[c] }, host);
+  for (const v of [0.2, 0.5, 0.8]) {
+    htmlEl("div", { class: "rowhead", text: `v = ${v}` }, host);
+    for (const c of cols) {
+      const s = { ...P1, v, ...(fixed ? { fixed: c } : { strategy: c }) };
+      const pts = BIDS.map((b) => p1Value(v, b, s));
+      const best = Math.max(...pts);
+      const truthBest = p1Value(v, v, s) > best - 1e-9;
+      const selected = P1.v === v && (fixed ? P1.fixed === c : P1.strategy === c);
+      const btn = htmlEl("button", { class: "mini", type: "button", "aria-pressed": String(selected), "aria-label": `Load v = ${v}, ${fixed ? "rival bid " + c : STRAT_LABEL[c]}` }, host);
+      const W = 120, H = 58;
+      const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, preserveAspectRatio: "none", "aria-hidden": "true" }, btn);
+      const lo = Math.min(0, ...pts), hi = Math.max(0.0001, ...pts);
+      const sy = (y) => 4 + (hi - y) / (hi - lo) * (H - 8);
+      const sx = (x) => x * W;
+      svgEl("line", { x1: 0, x2: W, y1: sy(0), y2: sy(0), style: "stroke:var(--axis);stroke-width:1", "vector-effect": "non-scaling-stroke" }, svg);
+      svgEl("line", { x1: sx(v), x2: sx(v), y1: 0, y2: H, style: "stroke:var(--ink-2);stroke-width:1;stroke-dasharray:3 3", "vector-effect": "non-scaling-stroke" }, svg);
+      svgEl("path", { d: pts.map((y, i) => (i ? "L" : "M") + sx(BIDS[i]).toFixed(1) + "," + sy(y).toFixed(1)).join(""), style: "fill:none;stroke:var(--s1);stroke-width:2", "vector-effect": "non-scaling-stroke" }, svg);
+      svgEl("ellipse", { cx: sx(v), cy: sy(p1Value(v, v, s)), rx: 3.4, ry: 3.4 * H / 58, style: "fill:var(--ink);stroke:var(--surface);stroke-width:1", "vector-effect": "non-scaling-stroke" }, svg);
+      const cap = htmlEl("div", { class: "cap" }, btn);
+      htmlEl("span", { text: "max " + fmt(best, 3) }, cap);
+      htmlEl("span", { class: "ok", text: truthBest ? "✓ b=v best" : "✗" }, cap);
+      btn.addEventListener("click", () => {
+        P1.v = v;
+        if (fixed) P1.fixed = c; else P1.strategy = c;
+        P1.bid = v;
+        resetArena1();
+        renderP1();
+        renderJump();
+      });
+    }
+  }
+}
+
+/* ---- one-auction arena ---- */
+function resetArena1() { p1Arena.n = 0; p1Arena.wins = 0; p1Arena.sum = 0; p1Arena.last = null; }
+function playOne1(rng) {
+  const rivals = [];
+  for (let j = 0; j < P1.rivals; j++) {
+    rivals.push(P1.mode === "fixed" ? { value: null, bid: P1.fixed } : rivalBid(P1.strategy, rng));
+  }
+  const top = Math.max(...rivals.map((r) => r.bid));
+  const tie = Math.abs(P1.bid - top) < 1e-9;
+  let win = P1.bid > top || (P1.mode === "random" && P1.bid >= top);
+  let share = 1;
+  if (tie && P1.mode === "fixed") { share = 1 / (P1.rivals + 1); win = true; }
+  const utility = win ? share * (P1.v - top) : 0;
+  return { rivals, top, win, utility, tie: tie && P1.mode === "fixed", share };
+}
+function runArena1(times) {
+  let last = null;
+  for (let i = 0; i < times; i++) {
+    last = playOne1(Math.random);
+    p1Arena.n++;
+    if (last.win) p1Arena.wins += last.share;
+    p1Arena.sum += last.utility;
+  }
+  p1Arena.last = last;
+  renderArena1();
+}
+function renderArena1() {
+  const host = $("p1-arena");
+  host.replaceChildren();
+  const W = Math.max(280, host.clientWidth || 600), H = 150;
+  const m = { l: 18, r: 18 };
+  const sx = (x) => m.l + x * (W - m.l - m.r);
+  const svg = svgEl("svg", { class: "arena-svg", viewBox: `0 0 ${W} ${H}`, height: H, role: "img", "aria-label": "Number line showing the bids in the last auction" }, host);
+  const axisY = 92;
+  svgEl("line", { x1: sx(0), x2: sx(1), y1: axisY, y2: axisY, style: "stroke:var(--axis);stroke-width:2" }, svg);
+  for (let t = 0; t <= 1.0001; t += 0.1) {
+    svgEl("line", { x1: sx(t), x2: sx(t), y1: axisY - 3, y2: axisY + 3, style: "stroke:var(--axis)" }, svg);
+    if (Math.round(t * 10) % 5 === 0) svgEl("text", { x: sx(t), y: axisY + 18, "text-anchor": "middle", class: "axis-text", text: t.toFixed(1) }, svg);
+  }
+  const L = p1Arena.last;
+  // profit band between price and value
+  if (L && L.win) {
+    const a = Math.min(L.top, P1.v), b = Math.max(L.top, P1.v);
+    const good = P1.v >= L.top;
+    svgEl("rect", { x: sx(a), y: axisY - 10, width: Math.max(1, sx(b) - sx(a)), height: 20, rx: 4, style: `fill:var(${good ? "--good-wash" : "--bad-wash"})` }, svg);
+    svgEl("text", { x: (sx(a) + sx(b)) / 2, y: axisY + 34, "text-anchor": "middle", class: "ref-text", text: (good ? "profit " : "loss ") + signed(L.utility, 2) }, svg);
+  }
+  // value marker
+  svgEl("path", { d: `M${sx(P1.v)},${axisY - 7} l7,7 l-7,7 l-7,-7z`, style: "fill:var(--ink)" }, svg);
+  svgEl("text", { x: sx(P1.v), y: axisY + 50, "text-anchor": "middle", class: "ref-text", text: `your value v = ${P1.v}` }, svg);
+  // your bid flag
+  const bx = sx(P1.bid);
+  svgEl("line", { x1: bx, x2: bx, y1: 18, y2: axisY, style: "stroke:var(--s1);stroke-width:2.5" }, svg);
+  svgEl("text", { x: bx, y: 12, "text-anchor": bx > W - 70 ? "end" : bx < 70 ? "start" : "middle", class: "handle-text", text: `you bid ${P1.bid.toFixed(2)}` }, svg);
+  // rival bids
+  if (L) {
+    L.rivals.forEach((r, j) => {
+      const rx = sx(r.bid);
+      const isTop = Math.abs(r.bid - L.top) < 1e-12;
+      const y = 40 + j * 18;
+      svgEl("line", { x1: rx, x2: rx, y1: y + 6, y2: axisY, style: `stroke:var(--ink-2);stroke-width:${isTop ? 2 : 1};stroke-dasharray:${isTop ? "none" : "3 3"}` }, svg);
+      svgEl("circle", { cx: rx, cy: y, r: 6, style: `fill:var(${isTop ? "--ink-2" : "--raised"});stroke:var(--ink-2);stroke-width:2` }, svg);
+      svgEl("text", { x: rx + (rx > W - 120 ? -10 : 10), y: y + 4, "text-anchor": rx > W - 120 ? "end" : "start", class: "ref-text", text: `rival ${j + 2}: ${r.bid.toFixed(2)}` }, svg);
+    });
+  }
+
+  const story = $("p1-story");
+  story.replaceChildren();
+  if (!L) {
+    story.textContent = "Press “Run 1 auction” to draw the rivals and settle one auction with your current bid.";
+  } else {
+    const ol = htmlEl("ol", {}, story);
+    L.rivals.forEach((r, j) => {
+      const txt = r.value == null ? `Rival ${j + 2} bids the fixed amount ${r.bid.toFixed(2)}.`
+        : P1.strategy === "random-bid" ? `Rival ${j + 2} drew value ${r.value.toFixed(2)}, ignored it, and bid a random ${r.bid.toFixed(2)}.`
+        : P1.strategy === "half-value" ? `Rival ${j + 2} drew value ${r.value.toFixed(2)} and bid half: ${r.bid.toFixed(2)}.`
+        : `Rival ${j + 2} drew value ${r.value.toFixed(2)} and bid it: ${r.bid.toFixed(2)}.`;
+      htmlEl("li", { text: txt }, ol);
+    });
+    const li = htmlEl("li", {}, ol);
+    htmlEl("span", { class: "pill " + (L.win ? "win" : "lose"), text: L.win ? "✓ Win" : "✗ Lose" }, li);
+    li.appendChild(document.createTextNode(" "));
+    if (L.tie) li.appendChild(document.createTextNode(`Your bid ties the rival bid, so the item is shared: profit ${signed(L.utility, 3)}.`));
+    else if (L.win) li.appendChild(document.createTextNode(`Your bid ${P1.bid.toFixed(2)} beats ${L.top.toFixed(2)}. You pay ${L.top.toFixed(2)} (not your bid): profit ${P1.v} ${MINUS} ${L.top.toFixed(2)} = ${signed(L.utility, 3)}.`));
+    else li.appendChild(document.createTextNode(`The highest rival bid ${L.top.toFixed(2)} beats your ${P1.bid.toFixed(2)}. You pay nothing: profit 0.`));
+  }
+  $("p1-c-n").textContent = p1Arena.n.toLocaleString();
+  $("p1-c-w").textContent = p1Arena.n ? pct(p1Arena.wins / p1Arena.n) : "—";
+  $("p1-c-u").textContent = p1Arena.n ? fmt(p1Arena.sum / p1Arena.n) : "—";
+  $("p1-c-e").textContent = fmt(p1Value(P1.v, P1.bid));
+}
+
+function setP1(patch) {
+  Object.assign(P1, patch);
+  resetArena1();
+  renderP1();
+  renderJump();
+}
+onGroup("p1-v", (val) => setP1({ v: +val, bid: +val }));
+onGroup("p1-rivals", (val) => setP1({ rivals: +val }));
+onGroup("p1-mode", (val) => setP1({ mode: val }));
+onGroup("p1-strategy", (val) => setP1({ strategy: val }));
+onGroup("p1-fixed", (val) => setP1({ fixed: +val }));
+$("p1-bid").addEventListener("input", (e) => { P1.bid = round2(+e.target.value); resetArena1(); renderP1(); });
+$("p1-truth").addEventListener("click", () => setP1({ bid: P1.v }));
+$("p1-run1").addEventListener("click", () => runArena1(1));
+$("p1-run1k").addEventListener("click", () => runArena1(1000));
+$("p1-reset").addEventListener("click", () => { resetArena1(); renderArena1(); });
+
+/* ==================================================================
+   PART 2 — first-price auction
+================================================================== */
+const P2 = { n: 3, v: 0.5, k: 0.7, inc: 0.01, compare: false, zoom: true };
+const P2_TRIALS = 200000;
+const N_COLOR = { 2: "--s1", 3: "--s2", 4: "--s3" };
+const K_BASE = Array.from({ length: 20 }, (_, i) => +((i + 1) / 10).toFixed(1));
+const alphaOf = (n) => (n - 1) / n;
+function kGrid(n) {
+  const a = alphaOf(n);
+  const ks = K_BASE.filter((k) => Math.abs(k - a) > 1e-9);
+  ks.push(a);
+  return ks.sort((x, y) => x - y);
+}
+function exactFP(n, v, k) {
+  const a = alphaOf(n), bid = k * v;
+  const win = bid <= 0 ? 0 : bid >= a ? 1 : (bid / a) ** (n - 1);
+  return { u: (v - bid) * win, win };
+}
+// Top two rival bids per auction, generated once per n with a fixed seed.
+const fpRivals = new Map();
+function fpData(n) {
+  if (fpRivals.has(n)) return fpRivals.get(n);
+  const rng = mulberry32(hashSeed("part2|" + n));
+  const a = alphaOf(n);
+  const r1 = new Float64Array(P2_TRIALS), r2 = new Float64Array(P2_TRIALS);
+  for (let i = 0; i < P2_TRIALS; i++) {
+    let first = -1, second = -1;
+    for (let j = 0; j < n - 1; j++) {
+      const b = a * rng();
+      if (b > first) { second = first; first = b; } else if (b > second) second = b;
+    }
+    r1[i] = first; r2[i] = second;
+  }
+  const d = { r1, r2 };
+  fpRivals.set(n, d);
+  return d;
+}
+function simFP(n, v, k, inc) {
+  const { r1, r2 } = fpData(n);
+  const b1 = k * v;
+  let wins = 0, uSum = 0, strict = 0, anyInc = 0, b1Inc = 0, over = 0;
+  for (let i = 0; i < P2_TRIALS; i++) {
+    let margin;
+    if (b1 >= r1[i]) {           // bidder 1 wins (ties go to bidder 1, as in the Python code)
+      margin = b1 - r1[i];
+      wins++; uSum += v - b1; over += margin;
+      if (margin > inc) b1Inc++;
+    } else {
+      margin = r1[i] - Math.max(b1, r2[i]);
+    }
+    if (margin > 1e-12) strict++;
+    if (margin > inc) anyInc++;
+  }
+  return {
+    u: uSum / P2_TRIALS, win: wins / P2_TRIALS, strict: strict / P2_TRIALS, anyInc: anyInc / P2_TRIALS,
+    b1Inc: wins ? b1Inc / wins : NaN, over: wins ? over / wins : NaN,
+  };
+}
+const fpCurves = new Map();
+function fpCurve(n, v, inc) {
+  const key = `${n}|${v}|${inc}`;
+  if (!fpCurves.has(key)) fpCurves.set(key, kGrid(n).map((k) => ({ k, ...simFP(n, v, k, inc), exact: exactFP(n, v, k) })));
+  return fpCurves.get(key);
+}
+
+const p2Chart = new Chart($("p2-chart"), 330);
+const p2Frac = new Chart($("p2-frac-chart"), 240);
+const p2Arena = { n: 0, any: 0, b1: 0, b1Inc: 0, last: null, timer: null };
+
+function snapK(x) {
+  const a = alphaOf(P2.n);
+  if (Math.abs(x - a) < 0.012) return a;
+  return round2(x);
+}
+function kLabel(k) { return Math.abs(k - 2 / 3) < 1e-9 ? "2/3" : k.toFixed(2); }
+
+function renderP2() {
+  setPressed("p2-n", P2.n);
+  setPressed("p2-inc", P2.inc);
+  $("p2-compare").checked = P2.compare;
+  $("p2-zoom").checked = P2.zoom;
+  $("p2-k").value = P2.k;
+  $("p2-k-out").textContent = kLabel(P2.k);
+  $("p2-v").value = P2.v;
+  $("p2-v-out").textContent = P2.v.toFixed(2);
+
+  const n = P2.n, v = P2.v, a = alphaOf(n), col = N_COLOR[n];
+  const curve = fpCurve(n, v, P2.inc);
+  const cur = simFP(n, v, P2.k, P2.inc);
+  const ex = exactFP(n, v, P2.k);
+  const exEq = exactFP(n, v, a);
+  const fine = Array.from({ length: 191 }, (_, i) => 0.1 + i * 0.01);
+  const exactLine = (nn) => [...fine, alphaOf(nn)].sort((x, y) => x - y).map((k) => ({ x: k, y: exactFP(nn, v, k).u }));
+
+  const series = [];
+  if (P2.compare) {
+    for (const nn of [2, 3, 4]) series.push({ color: N_COLOR[nn], points: exactLine(nn), width: nn === n ? 2.5 : 1.75, opacity: nn === n ? 1 : 0.75 });
+  } else {
+    series.push({ color: col, points: exactLine(n), width: 2.5 });
+  }
+  series.push({ color: col, points: curve.map((p) => ({ x: p.k, y: p.u })), line: false, dots: true, r: 3.6 });
+  const vlines = P2.compare
+    ? [2, 3, 4].map((nn) => ({ x: alphaOf(nn), label: nn === n ? `equilibrium k = ${kLabel(alphaOf(nn))}` : "", color: N_COLOR[nn], dash: "3 4" }))
+    : [{ x: a, label: `equilibrium k = ${kLabel(a)}`, color: "--ink-2" }];
+  vlines.push({ x: 1, label: "k = 1: bid = value", color: "--muted", dash: "2 3" });
+
+  // Zoom: show the positive region around the peak; deep losses for k > 1 are clipped.
+  const peak = Math.max(...(P2.compare ? [2, 3, 4] : [n]).map((nn) => exactFP(nn, v, alphaOf(nn)).u));
+  const yZoom = P2.zoom && peak > 0 ? { min: -0.35 * peak, max: 1.15 * peak } : {};
+  p2Chart.render({
+    label: "Expected profit for each multiplier k",
+    x: { min: 0.1, max: 2, label: "Bid multiplier k (bid = k·v)", ticks: [0.1, 0.5, 1, 1.5, 2], decimals: 1 },
+    y: { label: "Expected profit", ...yZoom },
+    series, vlines,
+    handle: { x: P2.k, y: ex.u, label: `k = ${kLabel(P2.k)}` },
+    snap: snapK,
+    onScrub: (x) => { P2.k = x; p2ResetArena(); renderP2(); },
+    onKey: (d) => { P2.k = clamp(round2(P2.k + d * 0.01), 0.1, 2); p2ResetArena(); renderP2(); },
+    tooltip: (x) => {
+      const rows = [];
+      if (P2.compare) for (const nn of [2, 3, 4]) { const e = exactFP(nn, v, x).u; rows.push({ color: N_COLOR[nn], value: fmt(e, 4), label: `exact, n = ${nn}`, y: e }); }
+      else { const e = exactFP(n, v, x).u; rows.push({ color: col, value: fmt(e, 4), label: "exact", y: e }); }
+      const s = simFP(n, v, x, P2.inc);
+      rows.push({ color: col, value: fmt(s.u, 4), label: `simulated, n = ${n}`, dash: true });
+      rows.push({ color: "--muted", value: pct(s.win), label: "win chance" });
+      return { title: `k = ${kLabel(x)} · bid ${fmt(x * v, 3)}`, rows };
+    },
+  });
+  const leg = P2.compare
+    ? [2, 3, 4].map((nn) => ({ kind: "line", color: N_COLOR[nn], label: `Exact, n = ${nn}` }))
+    : [{ kind: "line", color: col, label: `Exact, n = ${n}` }];
+  leg.push({ kind: "dot", color: col, label: `Simulated, n = ${n} (k = 0.1…2.0 plus equilibrium)` }, { kind: "ring", label: "Your k (drag it)" });
+  legend("p2-legend", leg);
+
+  // fraction chart
+  p2Frac.render({
+    label: "Fraction of auctions where the winner could have paid less",
+    height: 240,
+    x: { min: 0.1, max: 2, label: "k", ticks: [0.1, 0.5, 1, 1.5, 2], decimals: 1 },
+    y: { label: "Fraction", zero: false, max: 1.0, decimals: 2 },
+    series: [
+      { color: col, points: curve.map((p) => ({ x: p.k, y: p.anyInc })), dots: true, r: 3 },
+      { color: col, points: curve.filter((p) => Number.isFinite(p.b1Inc)).map((p) => ({ x: p.k, y: p.b1Inc })), dash: "5 4", width: 2 },
+    ],
+    vlines: [{ x: P2.k, label: `k = ${kLabel(P2.k)}`, color: "--ink" }],
+    snap: snapK,
+    onScrub: (x) => { P2.k = x; p2ResetArena(); renderP2(); },
+    tooltip: (x) => {
+      const s = simFP(n, v, x, P2.inc);
+      return {
+        title: `k = ${kLabel(x)}`,
+        rows: [
+          { color: col, value: pct(s.anyInc), label: "any winner", y: s.anyInc },
+          { color: col, value: pct(s.b1Inc), label: "when you won", dash: true, y: s.b1Inc },
+          { color: "--muted", value: pct(s.strict, 1), label: "strict (any gap > 0)" },
+        ],
+      };
+    },
+  });
+  legend("p2-frac-legend", [{ kind: "line", color: col, label: "Any winner" }, { kind: "dash", color: col, label: "Only auctions you won" }]);
+  $("p2-frac-sub").textContent = `Share of auctions where the winner could have bid ${P2.inc} less and still won (n = ${n}).`;
+  const strictMin = Math.min(...curve.map((p) => p.strict));
+  $("p2-strict-note").textContent = `Strict version (any gap at all): at least ${pct(strictMin, 1)} for every k. With continuous bids two bids are never exactly equal, so the winner can always shave something off.`;
+
+  // stats + verdict
+  $("p2-bid").textContent = fmt(P2.k * v);
+  $("p2-win").textContent = pct(ex.win);
+  $("p2-win-sim").textContent = "simulated: " + pct(cur.win);
+  $("p2-u").textContent = fmt(ex.u, 4);
+  $("p2-u-sim").textContent = "simulated: " + fmt(cur.u, 4);
+  $("p2-ueq").textContent = fmt(exEq.u, 4);
+  $("p2-eq-k").textContent = `at k = ${kLabel(a)} (= ${n - 1}/${n})`;
+  const bestSim = curve.reduce((b, p) => (p.u > b.u ? p : b));
+  if (Math.abs(P2.k - a) < 1e-9) {
+    verdict("p2-verdict", "good", "You are at the equilibrium bid.", `No other k does better. In the simulation the best tested k is ${kLabel(bestSim.k)}, the equilibrium.`);
+  } else if (P2.k > 1) {
+    verdict("p2-verdict", "bad", "You are bidding more than the item is worth.", `Every win loses money. Moving to k = ${kLabel(a)} would gain ${signed(exEq.u - ex.u, 4)}.`);
+  } else {
+    verdict("p2-verdict", "bad", `Moving to k = ${kLabel(a)} would gain ${signed(exEq.u - ex.u, 4)}.`,
+      P2.k < a ? "You are shading too much: you lose auctions you could have won." : "You are shading too little: you win more, but earn less per win.");
+  }
+
+  fillTable("p2-table", ["k", "Exact profit", "Simulated profit", "Win chance", "Could pay less (any)", "…(you won)"],
+    curve.map((p) => [kLabel(p.k), fmt(p.exact.u, 5), fmt(p.u, 5), pct(p.win, 2), pct(p.anyInc, 1), pct(p.b1Inc, 1)]),
+    (i) => Math.abs(curve[i].k - a) < 1e-9);
+
+  renderArena2();
+}
+
+function p2ResetArena() { p2Arena.n = 0; p2Arena.any = 0; p2Arena.b1 = 0; p2Arena.b1Inc = 0; p2Arena.last = null; }
+function p2Step() {
+  const n = P2.n, a = alphaOf(n);
+  const bids = [{ who: "You", bid: P2.k * P2.v, you: true }];
+  for (let j = 2; j <= n; j++) { const value = Math.random(); bids.push({ who: `Bidder ${j}`, value, bid: a * value }); }
+  const sorted = [...bids].sort((x, y) => y.bid - x.bid || (x.you ? -1 : 1));
+  const winner = sorted[0], runner = sorted[1];
+  const gap = winner.bid - runner.bid;
+  p2Arena.n++;
+  if (gap > P2.inc) p2Arena.any++;
+  if (winner.you) { p2Arena.b1++; if (gap > P2.inc) p2Arena.b1Inc++; }
+  p2Arena.last = { bids, winner, runner, gap };
+  renderArena2();
+}
+function renderArena2() {
+  const host = $("p2-arena");
+  host.replaceChildren();
+  const L = p2Arena.last;
+  const n = P2.n;
+  const W = Math.max(260, host.clientWidth || 420);
+  const lane = 30, top = 8;
+  const H = top + n * lane + 26;
+  const maxX = Math.max(1, P2.k * P2.v) * 1.04;
+  const ml = 74, mr = 14;
+  const sx = (x) => ml + x / maxX * (W - ml - mr);
+  const svg = svgEl("svg", { class: "arena-svg", viewBox: `0 0 ${W} ${H}`, height: H, role: "img", "aria-label": "Bids in the last first-price auction" }, host);
+  for (const t of [0, 0.5, 1, 1.5, 2]) {
+    if (t > maxX) continue;
+    svgEl("line", { x1: sx(t), x2: sx(t), y1: top - 2, y2: H - 22, style: "stroke:var(--grid)" }, svg);
+    svgEl("text", { x: sx(t), y: H - 8, "text-anchor": "middle", class: "axis-text", text: t.toFixed(1) }, svg);
+  }
+  const rows = L ? L.bids : [{ who: "You", bid: P2.k * P2.v, you: true }, ...Array.from({ length: n - 1 }, (_, j) => ({ who: `Bidder ${j + 2}`, bid: NaN }))];
+  rows.forEach((r, i) => {
+    const y = top + i * lane;
+    svgEl("text", { x: ml - 8, y: y + 17, "text-anchor": "end", class: "axis-title", style: r.you ? "font-weight:700;fill:var(--ink)" : "", text: r.who }, svg);
+    if (!Number.isFinite(r.bid)) return;
+    const isWinner = L && r === L.winner;
+    svgEl("rect", { x: sx(0), y: y + 5, width: Math.max(2, sx(r.bid) - sx(0)), height: lane - 10, rx: 4, style: `fill:var(${isWinner ? "--s1" : "--axis"})` }, svg);
+    if (isWinner && L.runner) {
+      svgEl("rect", { x: sx(L.runner.bid), y: y + 3, width: Math.max(2, sx(r.bid) - sx(L.runner.bid)), height: lane - 6, rx: 4, style: "fill:var(--s2-wash);stroke:var(--s2);stroke-width:1.5;stroke-dasharray:4 3" }, svg);
+    }
+    const lx = sx(r.bid) + 6;
+    const right = lx > W - 60;
+    svgEl("text", { x: right ? sx(r.bid) - 6 : lx, y: y + 17, "text-anchor": right ? "end" : "start", class: "ref-text", style: isWinner ? "fill:var(--ink)" : "", text: r.bid.toFixed(3) + (isWinner ? " ★" : "") }, svg);
+  });
+  if (L && L.runner) {
+    const rx = sx(L.runner.bid);
+    svgEl("line", { x1: rx, x2: rx, y1: top, y2: top + n * lane, style: "stroke:var(--s2);stroke-width:1.5;stroke-dasharray:3 3" }, svg);
+  }
+  const story = $("p2-story");
+  story.replaceChildren();
+  if (!L) {
+    story.textContent = "Press Play. Each auction draws new values for the other bidders; they bid (n−1)/n of their value and you bid k·v.";
+  } else {
+    const could = L.gap > P2.inc;
+    const p = htmlEl("div", {}, story);
+    htmlEl("span", { class: "pill " + (could ? "lose" : "win"), text: could ? "Overpaid" : "Tight" }, p);
+    p.appendChild(document.createTextNode(` ${L.winner.you ? "You win" : L.winner.who + " wins"} with ${L.winner.bid.toFixed(3)}; the next-best bid is ${L.runner.bid.toFixed(3)}. ` +
+      (could ? `The winner could have bid ${L.gap.toFixed(3)} less and still won (the shaded gap).` : `The gap is only ${L.gap.toFixed(3)}, not more than the ${P2.inc} step.`)));
+  }
+  $("p2-c-any").textContent = p2Arena.n ? pct(p2Arena.any / p2Arena.n) : "—";
+  $("p2-c-n").textContent = `${p2Arena.n.toLocaleString()} auctions`;
+  $("p2-c-b1").textContent = p2Arena.b1 ? pct(p2Arena.b1Inc / p2Arena.b1) : "—";
+  $("p2-c-b1n").textContent = `${p2Arena.b1.toLocaleString()} wins`;
+}
+function p2Stop() {
+  if (p2Arena.timer) { clearInterval(p2Arena.timer); p2Arena.timer = null; }
+  $("p2-play").textContent = "▶ Play";
+}
+$("p2-play").addEventListener("click", () => {
+  if (p2Arena.timer) return p2Stop();
+  p2Step();
+  p2Arena.timer = setInterval(p2Step, 900);
+  $("p2-play").textContent = "❚❚ Pause";
+});
+$("p2-step").addEventListener("click", () => { p2Stop(); p2Step(); });
+function setP2(patch) { Object.assign(P2, patch); p2ResetArena(); renderP2(); }
+onGroup("p2-n", (val) => setP2({ n: +val, k: P2.k }));
+onGroup("p2-inc", (val) => setP2({ inc: +val }));
+$("p2-k").addEventListener("input", (e) => setP2({ k: snapK(+e.target.value) }));
+$("p2-v").addEventListener("input", (e) => setP2({ v: Math.round(+e.target.value * 100) / 100 }));
+$("p2-compare").addEventListener("change", (e) => setP2({ compare: e.target.checked }));
+$("p2-zoom").addEventListener("change", (e) => setP2({ zoom: e.target.checked }));
+$("p2-eq").addEventListener("click", () => setP2({ k: alphaOf(P2.n) }));
+
+/* ==================================================================
+   PART 3 — VCG cheapest path
+================================================================== */
+const EDGES = {
+  AB: { from: "A", to: "B", cost: 3 }, AC: { from: "A", to: "C", cost: 2 },
+  BD: { from: "B", to: "D", cost: 2 }, BE: { from: "B", to: "E", cost: 1 },
+  CE: { from: "C", to: "E", cost: 3 }, CF: { from: "C", to: "F", cost: 5 },
+  DF: { from: "D", to: "F", cost: 2 }, EF: { from: "E", to: "F", cost: 1 },
+};
+const NODES = { A: [70, 160], B: [255, 62], C: [255, 258], D: [465, 62], E: [465, 258], F: [650, 160] };
+const LABEL_T = { CF: 0.32, BE: 0.5 };
+const TRUE_COSTS = Object.fromEntries(Object.entries(EDGES).map(([e, d]) => [e, d.cost]));
+const REPORTS = Array.from({ length: 21 }, (_, i) => i * 0.5);
+const P3 = { edge: "BE", report: 1 };
+
+function allPaths(costs) {
+  const out = [];
+  const visit = (node, used, seen) => {
+    if (node === "F") { out.push({ edges: used, cost: used.reduce((s, e) => s + costs[e], 0) }); return; }
+    for (const [e, d] of Object.entries(EDGES)) if (d.from === node && !seen.has(d.to)) visit(d.to, [...used, e], new Set([...seen, d.to]));
+  };
+  visit("A", [], new Set(["A"]));
+  const name = (p) => "A" + p.edges.map((e) => EDGES[e].to).join("");
+  out.forEach((p) => { p.name = name(p); });
+  return out.sort((x, y) => (Math.abs(x.cost - y.cost) < 1e-9 ? (x.edges.join("") < y.edges.join("") ? -1 : 1) : x.cost - y.cost));
+}
+function vcg(costs) {
+  const paths = allPaths(costs);
+  const chosen = paths[0];
+  const payments = Object.fromEntries(Object.keys(EDGES).map((e) => [e, 0]));
+  const without = {};
+  for (const e of chosen.edges) {
+    const alt = paths.find((p) => !p.edges.includes(e));
+    without[e] = alt;
+    payments[e] = alt.cost - (chosen.cost - costs[e]);
+  }
+  return { paths, chosen, payments, without };
+}
+function edgeUtility(edge, out) { return out.chosen.edges.includes(edge) ? out.payments[edge] - TRUE_COSTS[edge] : 0; }
+const TRUTH = vcg(TRUE_COSTS);
+function outcomeFor(edge, report) { return vcg({ ...TRUE_COSTS, [edge]: report }); }
+
+const p3Chart = new Chart($("p3-chart"), 240);
+(function buildEdgeChips() {
+  for (const e of Object.keys(EDGES)) {
+    const host = TRUTH.chosen.edges.includes(e) ? $("p3-on") : $("p3-off");
+    htmlEl("button", { type: "button", "data-val": e, text: e }, host);
+  }
+})();
+
+function renderNet(out) {
+  const host = $("p3-net");
+  host.replaceChildren();
+  const svg = svgEl("svg", { class: "net-svg", viewBox: "0 0 720 320", role: "group", "aria-label": "Transportation network from A to F. Select an edge to misreport its cost." }, host);
+  const tip = htmlEl("div", { class: "tip" }, host);
+  tip.hidden = true;
+  const defs = svgEl("defs", {}, svg);
+  for (const [id, color] of [["arrow", "--axis"], ["arrow-on", "--s1"]]) {
+    const mk = svgEl("marker", { id, viewBox: "0 0 10 10", refX: 8, refY: 5, markerWidth: 12, markerHeight: 12, markerUnits: "userSpaceOnUse", orient: "auto-start-reverse" }, defs);
+    svgEl("path", { d: "M0,0 L10,5 L0,10 z", style: `fill:var(${color})` }, mk);
+  }
+  const chosen = new Set(out.chosen.edges);
+  const sel = P3.edge;
+  const alt = chosen.has(sel) ? out.without[sel] : null;
+  const altSet = new Set(alt ? alt.edges : []);
+  const R = 24;
+  const geo = (e) => {
+    const [x1, y1] = NODES[EDGES[e].from], [x2, y2] = NODES[EDGES[e].to];
+    const len = Math.hypot(x2 - x1, y2 - y1), ux = (x2 - x1) / len, uy = (y2 - y1) / len;
+    return { x1: x1 + ux * R, y1: y1 + uy * R, x2: x2 - ux * (R + 4), y2: y2 - uy * (R + 4), ux, uy, len };
+  };
+  for (const e of Object.keys(EDGES)) {
+    const g = geo(e);
+    const grp = svgEl("g", { class: "edge-g", tabindex: "0", role: "button", "aria-label": `Edge ${e}, true cost ${EDGES[e].cost}${chosen.has(e) ? ", on chosen path, paid " + fmt(out.payments[e], 1) : ""}` }, svg);
+    if (e === sel) svgEl("line", { x1: g.x1, y1: g.y1, x2: g.x2, y2: g.y2, style: "stroke:var(--ink);stroke-opacity:.14;stroke-width:16;stroke-linecap:round" }, grp);
+    svgEl("line", { class: "edge-focus", x1: g.x1, y1: g.y1, x2: g.x2, y2: g.y2, style: "stroke:transparent;stroke-width:12;stroke-linecap:round" }, grp);
+    const on = chosen.has(e);
+    svgEl("line", { x1: g.x1, y1: g.y1, x2: g.x2, y2: g.y2, "marker-end": `url(#${on ? "arrow-on" : "arrow"})`, style: `stroke:var(${on ? "--s1" : "--axis"});stroke-width:${on ? 5 : 2.5};stroke-linecap:round` }, grp);
+    if (on) svgEl("line", { class: "flow", x1: g.x1, y1: g.y1, x2: g.x2, y2: g.y2, style: "stroke:var(--surface);stroke-width:1.6;stroke-dasharray:4 8;opacity:.9" }, grp);
+    if (altSet.has(e)) svgEl("line", { x1: g.x1 - g.uy * 9, y1: g.y1 + g.ux * 9, x2: g.x2 - g.uy * 9, y2: g.y2 + g.ux * 9, style: "stroke:var(--s2);stroke-width:2.5;stroke-dasharray:7 5" }, grp);
+    // label
+    const t = LABEL_T[e] ?? 0.5;
+    const [ax, ay] = NODES[EDGES[e].from], [bx, by] = NODES[EDGES[e].to];
+    const lx = ax + (bx - ax) * t, ly = ay + (by - ay) * t;
+    const lied = e === sel && Math.abs(P3.report - EDGES[e].cost) > 1e-9;
+    const line1 = `${e} · ${EDGES[e].cost}`;
+    const line2 = lied ? `says ${fmt(P3.report, 1)}` : on ? `paid ${fmt(out.payments[e], 1)}` : "";
+    const w = Math.max(54, 8 * Math.max(line1.length, line2.length) + 12);
+    const h = line2 ? 38 : 24;
+    svgEl("rect", { x: lx - w / 2, y: ly - h / 2, width: w, height: h, rx: 8, style: `fill:var(--raised);stroke:var(${e === sel ? "--ink" : "--border"});stroke-width:${e === sel ? 2 : 1}` }, grp);
+    svgEl("text", { x: lx, y: ly + (line2 ? -3 : 4), "text-anchor": "middle", style: "fill:var(--ink);font-size:13px;font-weight:700", text: line1 }, grp);
+    if (line2) svgEl("text", { x: lx, y: ly + 13, "text-anchor": "middle", style: `fill:var(${lied ? "--s2" : "--ink-2"});font-size:11.5px;font-weight:600`, text: line2 }, grp);
+    svgEl("line", { class: "edge-hit", x1: g.x1, y1: g.y1, x2: g.x2, y2: g.y2 }, grp);
+    const choose = () => { setP3({ edge: e, report: EDGES[e].cost }); };
+    grp.addEventListener("click", choose);
+    grp.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); choose(); } });
+    grp.addEventListener("pointermove", (ev) => {
+      const r = host.getBoundingClientRect();
+      tip.replaceChildren();
+      htmlEl("div", { class: "t", text: `Edge ${e} · true cost ${EDGES[e].cost}` }, tip);
+      const rows = on
+        ? [[fmt(out.payments[e], 1), "payment"], [fmt(out.payments[e] - EDGES[e].cost, 1), "utility"], [out.without[e].name + " = " + fmt(out.without[e].cost, 1), "best path without it"]]
+        : [["0", "payment (not chosen)"], ["0", "utility"]];
+      for (const [val, lab] of rows) { const row = htmlEl("div", { class: "r" }, tip); htmlEl("strong", { text: val }, row); htmlEl("span", { text: lab }, row); }
+      htmlEl("div", { class: "t", style: "margin-top:4px", text: "Click to select" }, tip);
+      tip.hidden = false;
+      const x = ev.clientX - r.left, y = ev.clientY - r.top;
+      tip.style.left = Math.min(x + 14, r.width - tip.offsetWidth - 4) + "px";
+      tip.style.top = Math.max(0, y - tip.offsetHeight - 10) + "px";
+    });
+    grp.addEventListener("pointerleave", () => { tip.hidden = true; });
+  }
+  for (const [name, [x, y]] of Object.entries(NODES)) {
+    const end = name === "A" || name === "F";
+    svgEl("circle", { cx: x, cy: y, r: R, style: `fill:var(${end ? "--ink" : "--raised"});stroke:var(--ink);stroke-width:2` }, svg);
+    svgEl("text", { x, y: y + 6, "text-anchor": "middle", style: `fill:var(${end ? "--surface" : "--ink"});font-size:17px;font-weight:800;pointer-events:none`, text: name }, svg);
+  }
+}
+
+function renderP3() {
+  setPressed("p3-on", P3.edge);
+  setPressed("p3-off", P3.edge);
+  const e = P3.edge, trueCost = EDGES[e].cost;
+  $("p3-edge-name").textContent = e;
+  document.querySelectorAll(".p3-edge").forEach((s) => { s.textContent = e; });
+  $("p3-report").value = P3.report;
+  $("p3-report-out").textContent = fmt(P3.report, 1);
+
+  const out = outcomeFor(e, P3.report);
+  const onPath = out.chosen.edges.includes(e);
+  const u = edgeUtility(e, out);
+  const uTruth = edgeUtility(e, TRUTH);
+  renderNet(out);
+
+  // receipt
+  const rc = $("p3-receipt");
+  rc.replaceChildren();
+  const line = (label, value, cls) => { const d = htmlEl("div", { class: "line" + (cls ? " " + cls : "") }, rc); htmlEl("span", { text: label }, d); htmlEl("b", { text: value }, d); };
+  line("Chosen path (reported costs)", `${out.chosen.name} = ${fmt(out.chosen.cost, 1)}`);
+  line(`${e}: true cost → reported`, `${trueCost} → ${fmt(P3.report, 1)}`);
+  if (onPath) {
+    const alt = out.without[e];
+    const others = out.chosen.edges.filter((x) => x !== e);
+    const othersCost = others.reduce((s, x) => s + (x === e ? P3.report : TRUE_COSTS[x]), 0);
+    line(`Cheapest path without ${e}`, `${alt.name} = ${fmt(alt.cost, 1)}`);
+    line("Other chosen edges cost", others.map((x) => `${x} ${TRUE_COSTS[x]}`).join(" + ") + ` = ${fmt(othersCost, 1)}`);
+    line(`Payment to ${e}`, `${fmt(alt.cost, 1)} ${MINUS} ${fmt(othersCost, 1)} = ${fmt(out.payments[e], 1)}`);
+    line(`Utility = payment ${MINUS} true cost`, `${fmt(out.payments[e], 1)} ${MINUS} ${trueCost} = ${fmt(u, 1)}`, "total");
+  } else {
+    line(`Is ${e} on the chosen path?`, "No → payment 0");
+    line("Utility", fmt(0, 1), "total");
+  }
+  const delta = u - uTruth;
+  if (Math.abs(P3.report - trueCost) < 1e-9) {
+    verdict("p3-verdict", "good", "Telling the truth.", `Utility ${fmt(uTruth, 1)}. Move the slider to try a lie.`);
+  } else if (delta < -1e-9) {
+    verdict("p3-verdict", "bad", `This lie costs ${e} ${fmt(-delta, 1)}.`, `Change in utility ${signed(delta, 1)} compared with telling the truth.`);
+  } else {
+    verdict("p3-verdict", "info", "This lie changes nothing.", `Change in utility ${signed(delta, 1)}: ${e}'s own report never changes its payment.`);
+  }
+
+  // sweep chart
+  const sweep = REPORTS.map((r) => { const o = outcomeFor(e, r); return { r, o, u: edgeUtility(e, o) }; });
+  const bestGain = Math.max(...sweep.map((s) => s.u - uTruth));
+  p3Chart.render({
+    label: `Utility of edge ${e} for every reported cost`,
+    height: 240,
+    x: { min: 0, max: 10, label: `Cost reported by ${e}`, ticks: [0, 2, 4, 6, 8, 10], decimals: 0 },
+    y: { label: "Utility", decimals: 1 },
+    series: [{ color: "--s1", points: sweep.map((s) => ({ x: s.r, y: s.u })), dots: true, r: 3.4 }],
+    vlines: [{ x: trueCost, label: `true cost ${trueCost}`, color: "--ink-2" }],
+    hlines: [{ y: uTruth, label: "truthful utility", color: "--s2", dash: "6 4" }],
+    handle: { x: P3.report, y: u, label: `reports ${fmt(P3.report, 1)}` },
+    snap: (x) => Math.round(x * 2) / 2,
+    onScrub: (x) => setP3({ report: x }),
+    onKey: (d) => setP3({ report: clamp(P3.report + d * 0.5, 0, 10) }),
+    tooltip: (x) => {
+      const s = sweep[Math.round(x * 2)];
+      return {
+        title: `reports ${fmt(x, 1)} · path ${s.o.chosen.name}`,
+        rows: [
+          { color: "--s1", value: fmt(s.u, 1), label: "utility", y: s.u },
+          { color: "--muted", value: fmt(s.o.chosen.edges.includes(e) ? s.o.payments[e] : 0, 1), label: "payment" },
+          { color: "--s2", value: signed(s.u - uTruth, 1), label: "change vs truth", dash: true },
+        ],
+      };
+    },
+  });
+  legend("p3-legend", [{ kind: "line", color: "--s1", label: "Utility at each report" }, { kind: "dash", color: "--s2", label: `Truthful utility (${fmt(uTruth, 1)})` }, { kind: "ring", label: "Current report" }]);
+  fillTable("p3-table", ["Report", "Chosen path", "Payment", "Utility", "Change vs truth"],
+    sweep.map((s) => [fmt(s.r, 1), s.o.chosen.name, fmt(s.o.chosen.edges.includes(e) ? s.o.payments[e] : 0, 1), fmt(s.u, 1), signed(s.u - uTruth, 1)]),
+    (i) => Math.abs(REPORTS[i] - P3.report) < 1e-9);
+  if (bestGain > 1e-9) console.warn("Unexpected: a misreport beats the truth", e, bestGain);
+
+  // truthful payments table
+  fillTable("p3-pay", ["Edge", "True cost", "On path ABEF?", "Payment", "Utility"],
+    Object.keys(EDGES).map((x) => [x, String(TRUE_COSTS[x]), TRUTH.chosen.edges.includes(x) ? "Yes" : "No", fmt(TRUTH.payments[x], 0), fmt(edgeUtility(x, TRUTH), 0)]),
+    (i) => Object.keys(EDGES)[i] === e);
+}
+function setP3(patch) { Object.assign(P3, patch); renderP3(); renderJump(); }
+onGroup("p3-on", (val) => setP3({ edge: val, report: EDGES[val].cost }));
+onGroup("p3-off", (val) => setP3({ edge: val, report: EDGES[val].cost }));
+$("p3-report").addEventListener("input", (e) => setP3({ report: +e.target.value }));
+$("p3-truth").addEventListener("click", () => setP3({ report: EDGES[P3.edge].cost }));
+
+/* ==================================================================
+   Tabs, assignment map, theme
+================================================================== */
+let activeTab = 1;
+const rendered = { 1: false, 2: false, 3: false };
+function showTab(i, focus) {
+  activeTab = i;
+  for (const t of [1, 2, 3]) {
+    const tab = $("tab-" + t);
+    tab.setAttribute("aria-selected", String(t === i));
+    tab.tabIndex = t === i ? 0 : -1;
+    $("panel-" + t).hidden = t !== i;
+  }
+  if (i !== 2) p2Stop();
+  if (focus) $("tab-" + i).focus();
+  if (i === 1) renderP1(); else if (i === 2) renderP2(); else renderP3();
+  renderJump();
+}
+for (const t of [1, 2, 3]) {
+  $("tab-" + t).addEventListener("click", () => showTab(t));
+  $("tab-" + t).addEventListener("keydown", (ev) => {
+    if (ev.key === "ArrowRight") showTab(t % 3 + 1, true);
+    if (ev.key === "ArrowLeft") showTab((t + 1) % 3 + 1, true);
+  });
+}
+function currentJump() {
+  if (activeTab === 2) return "2";
+  if (activeTab === 3) return "3";
+  if (P1.rivals === 2) return "1C";
+  return P1.mode === "fixed" ? "1B" : "1A";
+}
+function renderJump() {
+  const cur = currentJump();
+  for (const b of document.querySelectorAll("[data-jump]")) b.setAttribute("aria-current", String(b.dataset.jump === cur));
+}
+function jumpTo(j) {
+  if (j === "1A") Object.assign(P1, { rivals: 1, mode: "random" });
+  if (j === "1B") Object.assign(P1, { rivals: 1, mode: "fixed" });
+  if (j === "1C") Object.assign(P1, { rivals: 2, mode: "random" });
+  if (j.startsWith("1")) { resetArena1(); showTab(1); }
+  else showTab(+j);
+}
+for (const b of document.querySelectorAll("[data-jump]")) b.addEventListener("click", () => jumpTo(b.dataset.jump));
+
+(function theme() {
+  const root = document.documentElement;
+  let saved = null;
+  try { saved = localStorage.getItem("auction-lab-theme"); } catch (e) { /* storage unavailable */ }
+  if (saved === "light" || saved === "dark") root.dataset.theme = saved;
+  $("theme-btn").addEventListener("click", () => {
+    const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+    root.dataset.theme = dark ? "light" : "dark";
+    try { localStorage.setItem("auction-lab-theme", root.dataset.theme); } catch (e) { /* ignore */ }
+  });
+})();
+
+// Deep links such as demo.html#1B or demo.html#3 open that part directly.
+const startHash = decodeURIComponent(location.hash.slice(1)).toUpperCase();
+if (["1A", "1B", "1C", "2", "3"].includes(startHash)) jumpTo(startHash); else showTab(1);
+</script>
+</body>
+</html>

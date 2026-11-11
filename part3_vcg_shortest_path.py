@@ -32,6 +32,7 @@ def run_misreport_sweep(edge: str, true_cost: float) -> list[dict[str, object]]:
         reported = dict(truthful_costs)
         reported[edge] = float(report)
         outcome = vcg_outcome(reported)
+        utility = edge_utility(edge, outcome, true_cost)
         rows.append({
             "edge": edge,
             "true_cost": true_cost,
@@ -39,8 +40,9 @@ def run_misreport_sweep(edge: str, true_cost: float) -> list[dict[str, object]]:
             "selected_path": path_label(outcome.path),
             "selected": edge in outcome.path,
             "payment": outcome.payments[edge],
-            "utility": edge_utility(edge, outcome, true_cost),
+            "utility": utility,
             "truthful_utility": baseline_utility,
+            "utility_change": utility - baseline_utility,
         })
     return rows
 
